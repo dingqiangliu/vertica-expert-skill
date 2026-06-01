@@ -17,7 +17,6 @@ vertica-expert-skill/
 ├── SKILL.md                                # Main skill definition
 ├── README.md                               # Project overview
 ├── CLAUDE.md                               # Internal documentation
-├── demo.md                                 # Demonstration examples
 ├── install.sh                              # Installation script
 ├── uninstall.sh                            # Uninstallation script
 ├── references/                             # Detailed reference guides
@@ -38,6 +37,8 @@ vertica-expert-skill/
 │   ├── mysql-migration.md                  # MySQL migration guide
 │   ├── machine-learning.md                 # In-database ML algorithms
 │   └── ml-function-mapping.md              # Cross-database ML mapping
+├── examples/                               # Examples of other databases
+└── slides/                                 # Slides in Python format
 ```
 
 ## Key Features
@@ -528,3 +529,19 @@ EOF
 - **Examples**: 100+ practical examples across development, migration, and ML
 
 This skill provides everything needed for successful Vertica database migration, development, and machine learning with optimal performance outcomes.
+
+## How to Generate the Slides
+
+The `slides/` directory contains Python scripts that generate slides using `python-pptx`. Before running them, make sure the required Python package is installed:
+
+```bash
+# Check dependency
+python3 -c "import pptx; print('python-pptx', pptx.__version__)"
+# If missing:
+pip install python-pptx
+
+# Generate the presentation
+python3 slides/vertica_expert_overview.py
+```
+
+The generated `.pptx` file will be saved in the `slides/` directory.

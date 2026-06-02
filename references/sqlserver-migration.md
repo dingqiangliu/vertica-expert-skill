@@ -427,10 +427,17 @@ $$;
 
 ### PERFORM Command Usage in PL/vSQL
 
-The PERFORM command is essential for executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.) and DML statements (INSERT, UPDATE, DELETE, MERGE) in PL/vSQL when you don't need to capture the immediate return value.
+In PL/vSQL, the PERFORM command is used to **discard the output** produced by SQL statements. In Vertica, every SQL statement that can execute outside a stored procedure produces a response:
+
+- **DML** (INSERT, UPDATE, DELETE, MERGE) → outputs the number of rows affected
+- **SELECT** and **CALL** → outputs `Tuples` or `Tuple`
+- **DDL** (CREATE, ALTER, DROP, etc.), **COMMIT**, **ROLLBACK**, and other statements → outputs success/failure messages
+- **EXECUTE** (dynamic SQL inside stored procedures) → can execute any of the above dynamic statements, producing the corresponding output (row counts, `Tuples`/`Tuple`, or status messages)
+
+If the output is not captured via `var := SQL_STATEMENT`, `var <- SQL_STATEMENT`, `SELECT ... INTO ...`, or `EXECUTE ... INTO ...`, then `PERFORM` must be prepended to discard it.
 
 **SQL Server**: DDL and DML statements can be used directly in T-SQL stored procedures.
-**Vertica**: Must use `PERFORM` for SQL statements that return no value (DDL, INSERT, UPDATE, DELETE, MERGE).
+**Vertica**: Must use `PERFORM` to discard output from DDL, DML, CALL, COMMIT, ROLLBACK, EXECUTE and other SQL statements.
 
 ```sql
 -- ❌ SQL Server style (won't work in Vertica)
@@ -442,11 +449,12 @@ PERFORM INSERT INTO audit_log VALUES ('Processing started');
 
 #### When to Use PERFORM
 - **DDL statements**: CREATE, ALTER, DROP, TRUNCATE, etc.
-- **INSERT statements**: When you don't need the inserted row count immediately
-- **UPDATE statements**: When you don't need the updated row count immediately
-- **DELETE statements**: When you don't need the deleted row count immediately
-- **MERGE statements**: For data synchronization operations
-- **Any SQL statement**: When you want to discard the return value, such as SELECT or CALL statement
+- **INSERT / UPDATE / DELETE / MERGE statements**: When you don't need the row count
+- **SELECT statements**: When you want to discard the Tuples/Tuple output
+- **CALL procedure statements**: When discarding the returned tuple
+- **COMMIT / ROLLBACK**: When discarding the status message
+- **EXECUTE (dynamic SQL)**: When you don't need to capture the result (row counts, Tuples/Tuple, or status messages)
+- **Any SQL statement**: When you want to discard the return value
 
 #### PERFORM Examples
 
@@ -460,6 +468,9 @@ WHERE status = 'ACTIVE';
 
 PERFORM DELETE FROM temp_data
 WHERE processed_date < CURRENT_DATE - 30;
+
+-- PERFORM with EXECUTE: discards output (row counts, Tuples/Tuple, or status messages) from dynamic SQL
+PERFORM EXECUTE 'UPDATE employees SET last_updated = SYSDATE()';
 ```
 
 #### Checking Results After PERFORM

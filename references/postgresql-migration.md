@@ -184,7 +184,7 @@ WHERE EXISTS (
 
 #### PERFORM Statement Requirement
 **PostgreSQL**: DDL and DML statements can be used directly in PL/pgSQL.
-**Vertica**: Must use `PERFORM` for DDL and SQL statements that return no value (INSERT, UPDATE, DELETE, MERGE, SELECT).
+**Vertica**: Must use `PERFORM` to discard output (row counts, Tuples/Tuple, status messages) for DDL, DML, CALL, COMMIT, ROLLBACK, EXECUTE and other SQL statements when not capturing return values via `:=`, `<-`, `SELECT ... INTO`, or `EXECUTE ... INTO`.
 
 ```sql
 -- ❌ PostgreSQL style (won't work in Vertica)
@@ -654,20 +654,28 @@ END;
 
 ### PERFORM Command Usage in PL/vSQL
 
-The PERFORM command is essential for executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.) and DML statements (INSERT, UPDATE, DELETE, MERGE) in PL/vSQL when you don't need to capture the immediate return value.
+In PL/vSQL, the PERFORM command is used to **discard the output** produced by SQL statements. In Vertica, every SQL statement that can execute outside a stored procedure produces a response:
+
+- **DML** (INSERT, UPDATE, DELETE, MERGE) → outputs the number of rows affected
+- **SELECT** and **CALL** → outputs `Tuples` or `Tuple`
+- **DDL** (CREATE, ALTER, DROP, etc.), **COMMIT**, **ROLLBACK**, and other statements → outputs success/failure messages
+- **EXECUTE** (dynamic SQL inside stored procedures) → can execute any of the above dynamic statements, producing the corresponding output (row counts, `Tuples`/`Tuple`, or status messages)
+
+If the output is not captured via `var := SQL_STATEMENT`, `var <- SQL_STATEMENT`, `SELECT ... INTO ...`, or `EXECUTE ... INTO ...`, then `PERFORM` must be prepended to discard it.
 
 #### When to Use PERFORM
 - **DDL statements**: CREATE, ALTER, DROP, TRUNCATE, etc.
-- **INSERT statements**: When you don't need the inserted row count immediately
-- **UPDATE statements**: When you don't need the updated row count immediately
-- **DELETE statements**: When you don't need the deleted row count immediately
-- **MERGE statements**: For data synchronization operations
-- **Any SQL statement**: When you want to discard the return value, such as SELECT or CALL statement
+- **INSERT / UPDATE / DELETE / MERGE statements**: When you don't need the row count
+- **SELECT statements**: When you want to discard the Tuples/Tuple output
+- **CALL procedure statements**: When discarding the returned tuple
+- **COMMIT / ROLLBACK**: When discarding the status message
+- **EXECUTE (dynamic SQL)**: When you don't need to capture the result (row counts, Tuples/Tuple, or status messages)
+- **Any SQL statement**: When you want to discard the return value
 
 #### PERFORM Examples
 
 ```sql
--- Use PERFORM for DDL, DML that doesn't need immediate row count
+-- Use PERFORM for DDL, DML, CALL, COMMIT, ROLLBACK to discard output
 PERFORM INSERT INTO audit_log (message, created_at)
 VALUES ('Processing started', SYSDATE());
 
@@ -677,6 +685,9 @@ WHERE status = 'ACTIVE';
 
 PERFORM DELETE FROM temp_data
 WHERE processed_date < CURRENT_DATE - 30;
+
+-- PERFORM with EXECUTE: discards output (row counts, Tuples/Tuple, or status messages) from dynamic SQL
+PERFORM EXECUTE 'UPDATE employees SET last_updated = SYSDATE()';
 ```
 
 #### Checking Results After PERFORM
@@ -1847,7 +1858,7 @@ SELECT ANALYZE_STATISTICS('employees');
 - [ ] NULL handling reviewed (PLvSQLCoerceNull set if needed)
 - [ ] FOR loops updated with required keywords (QUERY, CURSOR, RANGE)
 - [ ] DML return values captured directly (no GET DIAGNOSTICS ROW_COUNT needed)
-- [ ] MUST use the PERFORM command when executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.), COMMIT, ROLLBACK, DML statements (INSERT, UPDATE, DELETE, MERGE), CALL procedure statement and other SQL statements that you want to execute but don't need to capture the return value from
+- [ ] MUST use the PERFORM command to discard output (row counts, Tuples/Tuple, status messages) when executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.), COMMIT, ROLLBACK, DML statements (INSERT, UPDATE, DELETE, MERGE), CALL procedure statement, EXECUTE (dynamic SQL) and other SQL statements that you want to execute but don't need to capture the return value from via `:=`, `<-`, `SELECT ... INTO`, or `EXECUTE ... INTO`
 - [ ] Exception handling uses SQLSTATE/SQLERRM for basic info; GET STACKED DIAGNOSTICS with DETAIL_TEXT/HINT_TEXT/EXCEPTION_CONTEXT for detailed info
 - [ ] SQLSTATE code differences between PostgreSQL and Vertica reviewed
 - [ ] All procedures compile without errors

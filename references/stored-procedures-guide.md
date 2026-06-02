@@ -23,30 +23,15 @@ Understanding which SQL commands can be used inside and outside stored procedure
 
 | Command | Purpose | Cannot Use Outside PL/vSQL |
 |---------|---------|---------------------------|
-| `PERFORM` | Execute SQL and discard result, DDL, DML, CALL, COMMIT, ROLLBACK and other SQL statements | ✅ |
-| `RAISE` | Error handling and messaging | ✅ |
-| `:=` `<--` | Variable assignment | ✅ |
 | `DECLARE` | Variable declaration | ✅ |
 | `BEGIN...END` | Code blocks | ✅ |
 | `IF...THEN...END IF` | Conditional logic | ✅ |
 | `LOOP...END LOOP` | Looping constructs | ✅ |
+| `:=` `<--` | Variable assignment | ✅ |
+| `RAISE` | Error handling and messaging | ✅ |
 | `EXCEPTION` | Error handling blocks | ✅ |
-| `FOUND` | Check if last SQL returned rows | ✅ |
-
-**Examples of PL/vSQL-only commands:**
-
-```sql
--- PERFORM: Execute DDL, DML and discard row count
-PERFORM INSERT INTO audit_log VALUES ('Processing started');
-
--- RAISE: Generate notices, warnings, or errors
-RAISE NOTICE 'Processing % rows', rows;
-RAISE EXCEPTION 'Invalid input parameter';
-
--- Variable assignment
-v_counter := v_counter + 1;
-v_first_value <- SELECT column_name FROM table_name LIMIT 1;
-```
+| `EXECUTE` | Dynamic SQL construction | ✅ |
+| `PERFORM` | Execute SQL and discard output (row counts, Tuples/Tuple, status messages) for DDL, DML, CALL, COMMIT, ROLLBACK, EXECUTE and other SQL statements | ✅ |
 
 #### Commands Available in Both Contexts
 
@@ -54,38 +39,6 @@ v_first_value <- SELECT column_name FROM table_name LIMIT 1;
 |---------|------------|-----------------|-------|
 | `CALL` | Can call other procedures | ✅ Direct execution | Same syntax |
 | `DO` | N/A (not needed) | ✅ Execute anonymous blocks | External only |
-| `EXECUTE` | Dynamic SQL construction | ✅ Execute prepared statements | Different contexts |
-
-**Examples of shared commands:**
-
-```sql
--- CALL: Available in both contexts
-CALL my_stored_procedure(param1, param2);
-
--- DO: Execute anonymous PL/vSQL block (external only)
-DO $$
-BEGIN
-    RAISE NOTICE 'This works outside procedures';
-END;
-$$;
-
--- Inside PL/vSQL: Dynamic SQL
-DO $$
-DECLARE
-  sname varchar := 'dbadmin';
-  uid int;
-  uname varchar;
-BEGIN
-  uid := EXECUTE 'SELECT user_id FROM users WHERE user_name = $1' USING sname;
-  SELECT user_name INTO uname FROM users WHERE user_id = uid;
-  RAISE NOTICE 'uid = %, uname = %', uid, uname;
-END;
-$$;
-
--- EXECUTE: Different meanings in different contexts
--- Outside: Execute prepared statement
-EXECUTE my_prepared_query;
-```
 
 ## Basic Procedure Structure
 
@@ -110,7 +63,7 @@ $$;
 ```
 
 **Key Syntax Elements:**
-- **OR REPLACE**: Replace existing procedure with same name plus the parameter signature (number, types, order)
+- **OR REPLACE**: Replace existing procedure with [same name plus the parameter signature](#Procedure-Signatures-and-Overloading) (number, types, order)
 - **IF NOT EXISTS**: Create only if procedure doesn't exist (cannot use with OR REPLACE)
 - **parameter_mode**: IN (default), OUT, or INOUT
 - **LANGUAGE**: PLvSQL (default) or PLpgSQL (for compatibility)
@@ -320,53 +273,6 @@ CALL echo(19);
 -- Returns a single tuple: (19) — one row, column name is "x"
 ```
 
-### Complex Parameter Mode Example
-
-```sql
--- Temperature conversion with multiple parameter modes
-CREATE PROCEDURE f_to_c_and_k(
-    IN f_temp DOUBLE PRECISION,      -- Input: Fahrenheit temperature
-    OUT c_temp DOUBLE PRECISION,     -- Output: Celsius result
-    OUT k_temp DOUBLE PRECISION      -- Output: Kelvin result
-) AS $$
-BEGIN
-    c_temp := (f_temp - 32) * 5/9;           -- Convert to Celsius
-    k_temp := c_temp + 273.15;               -- Convert to Kelvin
-END;
-$$;
-
--- Helper procedure with INOUT parameter
-CREATE PROCEDURE f_to_c(INOUT temp DOUBLE PRECISION) AS $$
-BEGIN
-    temp := (temp - 32) * 5/9;
-END;
-$$;
-
--- Call the temperature conversion procedure
-CALL f_to_c_and_k(80);
--- Returns a single tuple: (26.6666666666667, 299.816666666667)
---   one row, column names: c_temp, k_temp
-```
-
-### Function Signatures and Overloading
-
-A function's signature is defined by the function's name and **input parameter types only** (IN and INOUT parameters). OUT parameters are not part of the signature.
-
-```sql
--- Valid overloading: Different input parameter types
-CREATE PROCEDURE find_average(IN a INT, IN b INT, IN c INT, OUT avg_result DOUBLE PRECISION) AS $$
-BEGIN
-    avg_result := (a + b + c) / 3.0;
-END;
-$$;
-
-CREATE PROCEDURE find_average(IN a FLOAT, IN b FLOAT, IN c FLOAT, OUT avg_result DOUBLE PRECISION) AS $$
-BEGIN
-    avg_result := (a + b + c) / 3.0;
-END;
-$$;
-```
-
 ### Example: Multiple OUT Parameter Assignment
 
 **How `:= CALL` works**: When a stored procedure has OUT or INOUT parameters, `CALL` returns a **single tuple (record)** — one row where each column corresponds to an OUT/INOUT parameter. The `:=` assignment unpacks the tuple's columns into comma-separated variables by position:
@@ -425,6 +331,25 @@ $$;
 - For a single OUT parameter, `var := CALL proc(...)` works directly (one-column tuple → scalar)
 - This syntax is ideal for SQL function migration scenarios from Oracle or other databases
 
+### Procedure Signatures and Overloading
+
+A procedure 's signature is defined by the procedure's name and **input parameter types only** (IN and INOUT parameters). OUT parameters are not part of the signature.
+
+```sql
+-- Valid overloading: Different input parameter types
+CREATE PROCEDURE find_average(IN a INT, IN b INT, IN c INT, OUT avg_result DOUBLE PRECISION) AS $$
+BEGIN
+    avg_result := (a + b + c) / 3.0;
+END;
+$$;
+
+CREATE PROCEDURE find_average(IN a FLOAT, IN b FLOAT, IN c FLOAT, OUT avg_result DOUBLE PRECISION) AS $$
+BEGIN
+    avg_result := (a + b + c) / 3.0;
+END;
+$$;
+```
+
 ## Parameter DEFAULT Keyword Limitation and Solution
 
 **Important**: Vertica PL/vSQL does not support the `DEFAULT` keyword in procedure parameter declarations. The following syntax will result in a syntax error:
@@ -441,7 +366,7 @@ END;
 $$;
 ```
 
-**Solution**: Use Procedure Overloading for 100% Oracle and other databases Compatibility
+**Solution**: Use Procedure Overloading for 100% other databases Compatibility
 
 > 🚨 **CRITICAL: All overloaded procedures MUST have the EXACT SAME NAME.**
 > Procedure overloading in Vertica works by matching the **procedure name** plus the parameter signature (number, types, order). Every overloaded variant **must** share the identical procedure name — only the parameter list differs. Using different names defeats the purpose of overloading and breaks call compatibility.
@@ -500,7 +425,23 @@ $$;
 
 ## Embedded SQL and PERFORM Command
 
-In PL/vSQL, you must use the PERFORM command when executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.), DML statements (INSERT, UPDATE, DELETE, MERGE), CALL procedure statement and other SQL statements that you want to execute but don't need to capture the return value from, or COMMIT, ROLLBACK.
+In PL/vSQL, the PERFORM command is used to **discard the output** produced by SQL statements. In Vertica, every SQL statement that can execute outside a stored procedure produces a response:
+
+- **DML** (INSERT, UPDATE, DELETE, MERGE) → outputs the number of rows affected
+- **SELECT** and **CALL** → outputs `Tuples` or `Tuple`
+- **DDL** (CREATE, ALTER, DROP, etc.), **COMMIT**, **ROLLBACK**, and other statements → outputs success/failure messages
+- **EXECUTE** (dynamic SQL inside stored procedures) → can execute any of the above dynamic statements, producing the corresponding output (row counts, `Tuples`/`Tuple`, or status messages)
+
+If the output is not captured via one of the following assignment forms, `PERFORM` must be prepended to discard it:
+
+| Capture Form | Example |
+|---|---|
+| `var := SQL_STATEMENT` | `v_count := UPDATE employees SET salary = salary * 1.1;` |
+| `var <- SQL_STATEMENT` | `v_name <- SELECT name FROM employees WHERE id = 1;` |
+| `SELECT ... INTO ...` | `SELECT name INTO v_name FROM employees WHERE id = 1;` |
+| `EXECUTE ... INTO ...` | `EXECUTE 'SELECT name FROM employees WHERE id = $1' INTO v_name USING 1;` |
+
+**When none of these capture forms is used, `PERFORM` is required.**
 
 ### When to Use PERFORM
 
@@ -513,6 +454,7 @@ Use PERFORM for:
 - CALL procedure statements
 - COMMIT
 - ROLLBACK
+- EXECUTE (dynamic SQL) when you don't need to capture the result
 - Any SQL statement where you want to discard the return value
 
 ### PERFORM Syntax
@@ -555,17 +497,27 @@ CREATE PROCEDURE demonstrate_differences() AS $$
 DECLARE
     v_result INTEGER;
     v_count INTEGER;
+    v_name VARCHAR;
 BEGIN
     -- Direct assignment: captures return value (number of rows affected)
     v_result := UPDATE employees SET salary = salary * 1.1;
     RAISE NOTICE 'Updated % employees', v_result;
     
-    -- PERFORM: executes DDL, DML statement but discards return value
+    -- PERFORM: executes DML statement but discards row count output
     PERFORM UPDATE employees SET last_updated = SYSDATE();
+    
+    -- SELECT ... INTO: captures query result, no PERFORM needed
+    SELECT name INTO v_name FROM employees WHERE id = 1;
+    
+    -- EXECUTE ... INTO: captures dynamic SQL result, no PERFORM needed
+    EXECUTE 'SELECT name FROM employees WHERE id = $1' INTO v_name USING 1;
+    
+    -- PERFORM EXECUTE: executes dynamic SQL but discards output (row counts, Tuples/Tuple, or status messages)
+    PERFORM EXECUTE 'UPDATE employees SET last_updated = SYSDATE()';
     
     -- Get row count separately if needed
     SELECT COUNT(*) INTO v_count FROM employees;
-    RAISE NOTICE 'Last update affected % rows', v_count;
+    RAISE NOTICE 'Total % rows', v_count;
 END;
 $$;
 ```
@@ -592,7 +544,7 @@ EXECUTE command_expression [ INTO target [, ...] ] [ USING expression [, ...] ];
 **✅ Recommended: Parameter Substitution (Better Readability & Security)**
 ```sql
 -- Clear, readable, and secure
-EXECUTE 'SELECT * FROM users WHERE id = $1 AND status = $2'
+PERFORM EXECUTE 'SELECT * FROM users WHERE id = $1 AND status = $2'
 USING user_id, 'ACTIVE';
 ```
 
@@ -601,7 +553,7 @@ USING user_id, 'ACTIVE';
 -- Hard to read, error-prone, vulnerable to SQL injection
 v_sql := 'SELECT * FROM users WHERE id = ' || user_id ||
          ' AND status = ''' || status_value || '''';
-EXECUTE v_sql;
+PERFORM EXECUTE v_sql;
 ```
 
 ### EXECUTE with Parameter Substitution Examples

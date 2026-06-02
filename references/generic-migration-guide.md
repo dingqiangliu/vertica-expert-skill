@@ -491,7 +491,7 @@ Use this checklist to verify that every migrated object is correct and complete.
 - [ ] Default parameter values implemented using overloading pattern
 - [ ] SQL functions analyzed for optimal migration strategy (subquery vs stored procedure)
 - [ ] DML return values captured directly (no source-database-specific row count mechanism needed)
-- [ ] MUST use the PERFORM command when executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.), COMMIT, ROLLBACK, DML statements (INSERT, UPDATE, DELETE, MERGE), CALL procedure statement and other SQL statements that you want to execute but don't need to capture the return value from
+- [ ] MUST use the PERFORM command to discard output (row counts, Tuples/Tuple, status messages) when executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.), COMMIT, ROLLBACK, DML statements (INSERT, UPDATE, DELETE, MERGE), CALL procedure statement, EXECUTE (dynamic SQL) and other SQL statements that you want to execute but don't need to capture the return value from via `:=`, `<-`, `SELECT ... INTO`, or `EXECUTE ... INTO`
 - [ ] Exception handling uses SQLSTATE/SQLERRM for basic info; GET STACKED DIAGNOSTICS with DETAIL_TEXT/HINT_TEXT/EXCEPTION_CONTEXT for detailed info
 - [ ] All procedures compile without errors
 - [ ] Parameter passing tested with various inputs

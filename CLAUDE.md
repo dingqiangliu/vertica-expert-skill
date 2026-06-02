@@ -207,7 +207,7 @@ Use for cross-database ML function equivalents. Contains:
 1. Change `NUMBER` to `INTEGER` or `NUMERIC`
 2. Replace `SQL%ROWCOUNT` with `FOUND` special variable or separate count query
 3. Change `SYSDATE` to `SYSDATE()`
-4. Use `PERFORM` for DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.) and DML statements (INSERT, UPDATE, DELETE) when not capturing return values
+4. Use `PERFORM` to discard output (row counts, Tuples/Tuple, status messages) for DDL, DML, CALL, COMMIT, ROLLBACK, and EXECUTE when not capturing return values
 5. Add proper DECLARE block for all variables
 6. Update exception handling with `GET STACKED DIAGNOSTICS`
 7. Update exception handling syntax
@@ -273,47 +273,6 @@ SELECT customer_id,
 FROM new_customers;
 ```
 
-## PERFORM Command Usage in PL/vSQL
-
-The PERFORM command is essential for executing DDL statements (CREATE, ALTER, DROP, TRUNCATE, etc.) and DML statements (INSERT, UPDATE, DELETE, MERGE) in PL/vSQL when you don't need to capture the immediate return value.
-
-### When to Use PERFORM
-- **DDL statements**: CREATE, ALTER, DROP, TRUNCATE, etc.
-- **INSERT statements**: When you don't need the inserted row count immediately
-- **UPDATE statements**: When you don't need the updated row count immediately
-- **DELETE statements**: When you don't need the deleted row count immediately
-- **MERGE statements**: For data synchronization operations
-- **Any SQL statement**: When you want to discard the return value
-
-### PERFORM Examples
-```sql
--- Use PERFORM for DDL, DML that doesn't need immediate row count
-PERFORM INSERT INTO audit_log (message, created_at) 
-VALUES ('Processing started', SYSDATE());
-
-PERFORM UPDATE employees 
-SET last_updated = SYSDATE() 
-WHERE status = 'ACTIVE';
-
-PERFORM DELETE FROM temp_data 
-WHERE processed_date < CURRENT_DATE - 30;
-```
-
-### Checking Results After PERFORM
-```sql
--- Use FOUND special variable to check if operation succeeded
-PERFORM UPDATE employees SET salary = salary * 1.1;
-IF FOUND THEN
-    RAISE NOTICE 'Update was successful';
-ELSE
-    RAISE NOTICE 'No rows were updated';
-END IF;
-
--- Or use separate query to get count if needed
-PERFORM INSERT INTO summary_table VALUES ('test');
-SELECT COUNT(*) INTO v_count FROM summary_table WHERE name = 'test';
-```
-
 ## Best Practices for Using This Skill
 
 ### 1. Progressive Disclosure
@@ -350,7 +309,7 @@ SELECT COUNT(*) INTO v_count FROM summary_table WHERE name = 'test';
 
 ### 6. PL/vSQL Command Scope Best Practices
 - **Understand command limitations**: Know which commands work only in PL/vSQL vs. both contexts
-- **PERFORM for DDL, DML**: Use PERFORM for CREATE, ALTER, DROP, TRUNCATE and INSERT, UPDATE, DELETE when discarding row counts
+- **PERFORM to discard output**: Use PERFORM for DDL, DML, CALL, COMMIT, ROLLBACK, and EXECUTE when discarding output (row counts, Tuples/Tuple, status messages)
 - **RAISE for messaging**: Use RAISE NOTICE/WARNING/EXCEPTION for debugging and error handling
 - **Variable assignment**: Use `:=` for regular assignment, `<-` for truncating assignment
 - **External alternatives**: Use DO blocks for anonymous PL/vSQL execution outside procedures
@@ -408,13 +367,6 @@ This skill works well with:
 
 ### Issue: EXECUTE Command Confusion
 **Solution**: Distinguish between external EXECUTE (prepared statements) and PL/vSQL EXECUTE (dynamic SQL). Use appropriate syntax for each context.
-
-## Version Compatibility
-
-This skill covers Vertica versions 9.x through 24.x. When providing specific guidance, consider:
-- Eon Mode features for newer versions
-- Deprecated features and their replacements
-- New function additions in recent releases
 
 ## Example Workflows
 

@@ -188,6 +188,27 @@ Use for cross-database ML function equivalents. Contains:
 - Migration examples from popular ML frameworks
 - Performance considerations and best practices
 
+### 15. Multi-Agent Migration Workflow (`references/multi-agent-migration-guide.md`) 🤖 **FOR LARGE-SCALE MIGRATIONS**
+**USE FOR COMPLEX MIGRATIONS** - This guide defines a 4-agent architecture to prevent context overflow and ensure rule adherence:
+
+**When to Use:**
+- ✅ More than 1 source file
+- ✅ Single source file exceeds 200 lines
+- ✅ Contains multiple stored procedures or functions
+- ✅ Large-scale migrations requiring strict context management
+
+**When NOT to Use:**
+- ❌ Only 1 small file
+- ❌ Simple table structure migration
+
+**Architecture:**
+1. **Manager Agent (Main Session)**: Controls workflow coordination, dispatches tasks, **🚫 NEVER reads source files or migration reference documents**, **STRICTLY VERIFIES** Migrator's unit test and Tester's test results
+2. **Requester Agent (Sub-Agent)**: Reads source files section-by-section using `Read(offset=N, limit=50)`, **EXCLUSIVE responsibility for file reading**, groups consecutive DML on same table
+3. **Migrator Agent (Sub-Agent)**: **ONLY agent that loads migration reference documents** (basic docs at startup, additional docs on-demand), performs code transformation, unit tests before returning
+4. **Tester Agent (Sub-Agent)**: Validates migrated code using unified test method (single VSQL call with autocommit), provides pass/fail feedback with complete logs
+
+**Key Principle:** Only Migrator loads migration reference documents. Manager, Requester, and Tester only read this guide. Manager has NO migration expertise - NEVER provides migration rules or decisions to Migrator.
+
 ## Common User Requests and Responses
 
 ### Request: Simple Function Conversion
@@ -412,7 +433,7 @@ This skill provides comprehensive Vertica SQL statements and stored procedures t
 
 ### VSQL Testing Setup
 
-The environment variable `VSQL` should contain the vsql connection parameters:
+The environment variable `VSQL` should encapsulate connection parameters:
 ```bash
 export VSQL='/opt/vertica/bin/vsql -h hostname -p 5433 -U username -w password dbname'
 ```

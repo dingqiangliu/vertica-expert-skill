@@ -245,22 +245,26 @@ The OLTP-to-OLAP rewrite **MUST** be performed **step-by-step and block-by-block
 
 | Step | Action | Details |
 |------|--------|---------|
-| 1. **MIGRATE** | Convert the object/statement to Vertica syntax | Apply one-to-one mapping, then rewrite OLTP→OLAP |
-| 2. **TEST** | Execute immediately to verify it works | See test methods below |
-| 3. **PASS** | If test succeeds → proceed to step 4. If test fails → consult reference docs, correct, and retry. If still failing after retry → document failure reason and append failed attempt to target file | Never skip or postpone a test |
-| 4. **APPEND** | Only after passing the test, append the migrated content to the target file | Never append untested code |
+| 1. **MIGRATE** | Convert the object/statement to Vertica syntax | Apply one-to-one migration, then rewrite OLTP→OLAP |
+| 2. **TEST** | Execute immediately to verify it works | **MUST check complete output logs** — never check only partial output. See test methods below |
+| 3. **CHECK LOGS** | **MUST check COMPLETE logs** — never check only partial output | Verify ALL messages, warnings, and errors |
+| 4. **PASS** | If test succeeds → proceed to step 5. If test fails → consult reference docs, correct, and retry. If still failing after retry → document failure reason and append failed attempt to target file | Never skip or postpone a test |
+| 5. **APPEND** | Only after passing the test, append the migrated content to the target file | Never append untested code |
 
 > 🚨 **NEVER append untested or failing code to the target file without documentation of the failure.**
+> 🚨 **ALWAYS check COMPLETE test logs** — partial log checking may miss critical errors or warnings. Verify ALL output including warnings, errors, and execution results.
 
 ### Test Methods by Object Type
 
-| Object Type | Test Method |
-|-------------|------------|
-| Table | Execute `CREATE TABLE (...)` directly |
-| View | `CREATE VIEW ... AS ...` then `SELECT * FROM view LIMIT 0` |
-| Stored Procedure | `CREATE PROCEDURE ...` then `CALL proc(...)` with test parameters |
-| Function | `CREATE FUNCTION ...` then `SELECT func(...)` with test parameters |
-| DML | Execute statement, then verify with `SELECT COUNT(*)` or result check |
+| Object Type | Test Method | Log Check Requirements |
+|-------------|------------|------------------------|
+| Table | Execute `CREATE TABLE (...)` directly | Check for WARNING, ERROR messages |
+| View | `CREATE VIEW ... AS ...` then `SELECT * FROM view LIMIT 0` | Verify view creation notice and query results |
+| Stored Procedure | `CREATE PROCEDURE ...` then `CALL proc(...)` with test parameters | Check procedure creation notice, CALL output, and any RAISE NOTICE messages |
+| Function | `CREATE FUNCTION ...` then `SELECT func(...)` with test parameters | Verify function creation notice and return value |
+| DML | Execute statement, then verify with `SELECT COUNT(*)` or result check | Check row count affected and any trigger/notice messages |
+
+> 🚨 **CRITICAL**: When using VSQL, always check the COMPLETE output. A successful execution may still contain WARNING or NOTICE messages that indicate potential issues.
 
 ### Data Preservation
 

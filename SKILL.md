@@ -1,6 +1,6 @@
 ---
 name: vertica-expert
-description: Comprehensive skill for Vertica database migration and development. Includes SQL syntax reference, custom SQL function development, PL/vSQL stored procedure development, UDx custom function creation (C++, Python, Java, R), in-database machine learning (regression, classification, clustering, time series), performance optimization, and migration from Oracle, SQL Server, PostgreSQL, and MySQL. Use this skill for writing Vertica SQL, developing stored procedures, creating custom functions, implementing machine learning workflows, optimizing performance, or migrating from other databases.
+description: Comprehensive skill for Vertica database migration and development. Includes SQL syntax reference, custom SQL function development, PL/vSQL stored procedure development, UDx custom function creation (C++, Python, Java, R), in-database machine learning (regression, classification, clustering, time series), performance optimization, and migration from Oracle, DB2, SQL Server, PostgreSQL, and MySQL. Use this skill for writing Vertica SQL, developing stored procedures, creating custom functions, implementing machine learning workflows, optimizing performance, or migrating from other databases. Features Multi-Agent Migration Workflow with Manager, Requester, Migrator, and Tester agents for large-scale migrations to ensure rule adherence and context management.
 ---
 
 # Vertica Expert
@@ -93,19 +93,115 @@ For optimizing existing queries:
 
 ### 7. Database Migration
 For migrating from other databases:
-- Identify source database type (Oracle, SQL Server, PostgreSQL, MySQL)
+- Identify source database type (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
 - Provide original SQL, procedures, or schema definitions
 - Specify any performance requirements
 - Include data volume and growth expectations
 
+#### When to Use Multi-Agent Migration Workflow
+**Use the Multi-Agent Migration Workflow when:**
+- ✅ More than 1 source file
+- ✅ Single source file exceeds 200 lines
+- ✅ Contains multiple stored procedures or functions
+- ✅ Single-agent mode frequently violates rules (reading entire files, skipping tests, etc.)
+- ✅ Large-scale migrations requiring strict context management
+
+**Do NOT use Multi-Agent Migration Workflow when:**
+- ❌ Only 1 small file
+- ❌ Simple table structure migration
+- ❌ Quick syntax conversion tasks
+
+**Multi-Agent Migration Workflow Overview:**
+The Multi-Agent Migration Workflow uses four specialized agents to ensure rule adherence and prevent context overflow:
+
+1. **Manager Agent (Main Session)**: **BASIC PERSONALITY: Strict process controller and coordinator WITHOUT migration knowledge**. Controls workflow coordination, determines source database type (as a fact), dispatches tasks to agents (**🚫 ONLY obtains source file content from Requester Agent** — never from any other source), **🔍 STRICTLY VERIFIES Migrator's unit test results** (checks unit test was performed, logs are complete, no anomalies exist; REJECTS and requires redo if verification fails), coordinates testing, **🔍 STRICTLY VERIFIES Tester's functional/integration test results** (checks tests were performed, logs are complete, no anomalies exist, no false positives like errors ignored but reported as PASS; REJECTS and requires redo if verification fails), appends to target file. **ONLY reminds Migrator to unit test, does NOT provide any other migration decisions, rules, or hints.** **🚫 ONLY creates Requester, Migrator, and Tester agents — no other agents allowed.** **🚫 NEVER provides migration transformation rules or decisions to Migrator — Manager has NO migration expertise.**
+2. **Requester Agent (Sub-Agent)**: Reads source files section-by-section (**EXCLUSIVE responsibility for file reading, NO migration knowledge**), **does NOT break objects or statements**, **groups consecutive DML statements on the same table**, **returns source code exactly as-is without any migration decisions or hints**, maintains file reading state
+3. **Migrator Agent (Sub-Agent)**: Receives source database type from Manager (as a fact), **decides which reference documents to load** (basic docs at startup, additional docs on-demand based on code), performs code transformation, applies one-to-one migration and OLTP→OLAP rewrites, unit tests using pre-configured VSQL (do NOT probe or guess VSQL content), reports unit test status with complete logs, cleans up after unit test.
+4. **Tester Agent (Sub-Agent)**: Validates migrated code by executing it in a single VSQL call with autocommit enabled. Uses unified test method for all code: in one VSQL call, enable autocommit, execute code, verify no errors or warnings in logs, confirm data commits. Tests code as-is and reports failures honestly. Includes complete logs after each code snippet passes functional testing. Preserves all migrated objects during functional testing — only deletes test data or temporary objects added by Tester.
+
+**Key Principle:** The **Migrator Agent** receives source database type from Manager (as a fact), **decides which reference documents to load** - basic docs at startup (generic-migration-guide, sql-syntax-reference, function-mapping, data-types), source-specific guide based on source database type, and additional docs on-demand based on code being migrated (e.g., oltp-to-olap-rewrite-guide only when code contains stored procedures). **The Manager, Requester, and Tester agents NEVER read migration reference documents** — they only read the [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) to understand their roles and the workflow. This separation prevents context overflow and ensures clear role boundaries.
+
+**Benefits:**
+
+- ✅ Manager maintains workflow discipline without migration context overload
+- ✅ Migrator focuses solely on code transformation with basic reference docs loaded at startup and additional docs loaded on-demand
+- ✅ Tester provides independent verification of migrated code
+- ✅ Each agent has smaller, focused context window
+- ✅ Easier to debug and restart specific components
+
+**Reference Documentation (for Manager, Requester, and Tester - from vertica-expert skill):**
+- [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) - Complete architecture, workflow details, and implementation templates
+
+**🚫 Manager, Requester, and Tester NEVER load these documents** (Migrator Agent only):
+- [Generic Migration Guide](references/generic-migration-guide.md)
+- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)
+- Database-specific migration guides (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
+- [SQL Syntax Reference](references/sql-syntax-reference.md)
+- [Function Mapping Guide](references/function-mapping.md)
+- [Data Types](references/data-types.md)
+- [Stored Procedures Guide](references/stored-procedures-guide.md)
+- [User-Defined SQL Functions Development Guide](references/user-defined-sql-functions-guide.md)
+
+**Quick Start:**
+To start a multi-agent migration, provide:
+1. Source database type (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
+2. Source files list (in dependency order)
+3. Target file path
+4. Vertica test database connection information (VSQL environment variable encapsulating connection parameters)
+
+The Manager Agent will:
+1. Read **ONLY** the [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md)
+2. **NOT read migration reference documents** (Generic Migration Guide, OLTP/OLAP Rewrite, database-specific guides)
+3. List migration requirements
+4. Wait for user confirmation
+5. Initialize Requester, Migrator, and Tester agents
+6. Execute two-phase migration cycle:
+
+   **Phase 1: Migration & Functional Testing**
+   REQUEST → Requester READS source file (offset=N, limit=50) → RETURNS code snippet → DISPATCH to Migrator → Migrator decides which reference documents to load → Migrator unit tests (up to 10 attempts) → **MANAGER VERIFIES UNIT TEST** → RECEIVE migrated code → FUNCTIONAL TEST via Tester Agent (single VSQL call: enable autocommit, execute code, verify) → **MANAGER VERIFIES TEST RESULTS** → IF PASS → APPEND → IF FAIL → REQUEST fix from Migrator (up to 3 attempts) → RETEST
+
+   **Phase 2: Integration Testing (after ALL code migrated)**
+   Manager instructs Tester to: DROP all test objects → Execute ALL migrated files → Run integration test → **MANAGER VERIFIES INTEGRATION TEST** → IF PASS → Migration complete → IF FAIL → Tester reports failures → Migrator fixes → Tester runs functional test on fixed code → If functional test passes: Tester runs integration test again from scratch → Repeat until integration test passes
+
+#### Multi-Agent Migration Workflow (Recommended for Large Migrations)
+**When to use:**
+- Source files > 1 file OR
+- Single file > 200 lines OR
+- Multiple stored procedures/functions OR
+- Single-agent approach has demonstrated context overflow issues
+
+**Architecture:**
+- **Manager Agent** (main session): **BASIC PERSONALITY: Strict process controller and coordinator WITHOUT migration knowledge**. Controls workflow coordination, dispatches tasks, coordinates testing (**🚫 ONLY obtains source file content from Requester Agent** — never from any other source, **🚫 NEVER reads migration reference documents** — delegated to Migrator Agent, **🚫 ONLY creates Requester, Migrator, and Tester agents** — no other agents allowed, **🚫 NEVER provides migration transformation rules or decisions to Migrator** — Manager has NO migration expertise — see [Complete Migration Requirement](references/generic-migration-guide.md#1-complete-migration-requirement), [Sequential Processing Requirement](references/generic-migration-guide.md#2-sequential-processing-requirement), [Object Integrity Requirement](references/generic-migration-guide.md#3-object-integrity-requirement))
+- **Requester Agent** (sub-agent): Reads source files section-by-section (**EXCLUSIVE responsibility for file reading**), identifies complete objects, maintains file reading state
+- **Migrator Agent** (sub-agent): Loads basic reference docs at startup, loads additional docs on-demand, performs code transformation and unit test using pre-configured VSQL (do NOT probe or guess VSQL content). **Reports unit test status** — includes complete output logs when tests pass. **Cleans up after unit test** — deletes all migrated objects, test data, and temporary objects after unit testing to avoid affecting subsequent functional tests.
+- **Tester Agent** (sub-agent): Independently tests migrated code using pre-configured VSQL (do NOT probe or guess VSQL content), provides pass/fail feedback. **Does NOT modify Manager's code** — tests code as-is and reports failures honestly. **Includes complete logs** — after each code snippet passes functional testing, includes the complete output logs from VSQL. **Preserves all migrated objects** during functional testing — only deletes test data or temporary objects added by Tester.
+
+**Benefits:**
+- Prevents context overflow (each agent has focused context)
+- Enforces sequential processing rules (Requester specializes in file reading)
+- Ensures every object is tested (dedicated Tester Agent)
+- Loads reference documents once (Migrator Agent initialization)
+- Clear separation of concerns (Manager coordinates, Requester reads, Migrator transforms, Tester validates)
+
+**Reference:** [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md)
+
 ## Core Reference Sections
 
-### 🚨 MANDATORY: Generic Migration Requirements
-- [Generic Migration Guide](references/generic-migration-guide.md) - **MANDATORY READING** for ALL database migrations
+### 🚨 MANDATORY: Generic Migration Requirements (Migrator Agent ONLY)
+- [Generic Migration Guide](references/generic-migration-guide.md) - **MANDATORY READING** for Migrator Agent
 - [Migration Guides Overview](references/migration-guides-overview.md) - Guide hierarchy and usage instructions
 
-### 🔄 OLTP to OLAP Rewrite (ESSENTIAL for ALL Migrations)
-- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) - **ESSENTIAL** for ALL database migrations. Contains 5 rewrite patterns (adjacent DML merging, loop-DML→set-based SQL, cursor→window functions, function-call→join, recursive CTE) with before/after examples and a migration checklist.
+### 🔄 OLTP to OLAP Rewrite (ESSENTIAL for Migrator Agent ONLY)
+- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) - **ESSENTIAL** for Migrator Agent. Contains 5 rewrite patterns (adjacent DML merging, loop-DML→set-based SQL, cursor→window functions, function-call→join, recursive CTE) with before/after examples and a migration checklist.
+
+### 🤖 Multi-Agent Migration Workflow (ALL Agents)
+**For Manager, Requester, and Tester:**
+- [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) - Architecture, workflow details, and implementation templates
+
+**🚫 Manager, Requester, and Tester NEVER load these documents:**
+- [Generic Migration Guide](references/generic-migration-guide.md) (Migrator's responsibility)
+- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) (Migrator's responsibility)
+- Database-specific migration guides (Migrator's responsibility)
 
 ### SQL Syntax and Development
 - [SQL Syntax Reference](references/sql-syntax-reference.md) - Comprehensive Vertica SQL syntax
@@ -132,11 +228,25 @@ For migrating from other databases:
 - [Query Optimization](references/query-optimization.md) - Performance tuning strategies
 
 ### Migration and Conversion (All Follow Generic Migration Requirements)
+**Single-Agent Migration:**
 - [Oracle to Vertica](references/oracle-migration.md) - Oracle migration following generic requirements
 - [DB2 to Vertica](references/db2-migration.md) - DB2 migration following generic requirements
 - [SQL Server to Vertica](references/sqlserver-migration.md) - SQL Server migration following generic requirements
 - [PostgreSQL to Vertica](references/postgresql-migration.md) - PostgreSQL migration following generic requirements
 - [MySQL to Vertica](references/mysql-migration.md) - MySQL migration following generic requirements
+
+**Multi-Agent Migration Workflow (ALL Agents):**
+- [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) - Architecture, workflow details, and implementation templates
+
+**🚫 These documents are ONLY loaded by Migrator Agent, NOT by Manager/Requester/Tester:**
+- [Generic Migration Guide](references/generic-migration-guide.md)
+- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)
+- Database-specific migration guides
+- [SQL Syntax Reference](references/sql-syntax-reference.md)
+- [Function Mapping Guide](references/function-mapping.md)
+- [Data Types](references/data-types.md)
+- [Stored Procedures Guide](references/stored-procedures-guide.md)
+- [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md)
 
 ## Examples
 
@@ -156,11 +266,23 @@ For migrating from other databases:
 **Input**: Customer churn prediction using historical data
 **Output**: Complete ML pipeline with data preparation, XGBoost model training, evaluation, and deployment
 
-### Example 5: Database Migration
+### Example 5: Database Migration (Single-Agent)
 **Input**: Oracle PL/SQL stored procedure for calculating customer lifetime value
 **Output**: Converted Vertica PL/vSQL procedure with performance optimizations and best practices
 
-### Example 6: Performance Optimization
+### Example 6: Database Migration (Multi-Agent Workflow)
+**Input**: Large Oracle database with 10+ source files, multiple stored procedures, views, and tables
+**Output**: Complete migration using Multi-Agent Workflow:
+1. Requester Agent reads source files section-by-section in alphabetical order
+2. Manager coordinates workflow and dispatches objects to Migrator Agent
+3. Migrator Agent transforms each object with basic reference docs loaded at startup and additional docs loaded on-demand
+4. Tester Agent validates each migration in test environment
+5. Manager appends passing objects to target file
+6. Final integration test and migration report
+
+**Process**: REQUEST → Requester READS → IDENTIFY → DISPATCH to Migrator → RECEIVE migrated code → TEST via Tester Agent → PASS → APPEND → REPEAT
+
+### Example 7: Performance Optimization
 **Input**: Slow SQL Server query with multiple joins taking 2+ minutes
 **Output**: Optimized Vertica query with projection design, encoding strategies, and monitoring recommendations
 
@@ -172,6 +294,28 @@ For migrating from other databases:
 3. **Update Statistics**: Always run ANALYZE_STATISTICS after data loads
 4. **Test Incrementally**: Migrate and test in small batches
 5. **Monitor Performance**: Use system tables to track query performance
+
+### Multi-Agent Migration Best Practices
+1. **Use for Large Migrations**: Apply multi-agent workflow when source files > 1 or single file > 200 lines
+2. **Manager Controls Flow**: Manager coordinates workflow and testing, dispatches tasks to Requester and Migrator agents, and coordinates testing via Tester Agent
+3. **Requester Reads Source Files**: Requester Agent reads source files section-by-section using Read(offset=N, limit=50), ensuring compliance with [Complete Migration Requirement](references/generic-migration-guide.md#1-complete-migration-requirement), [Sequential Processing Requirement](references/generic-migration-guide.md#2-sequential-processing-requirement), and [Object Integrity Requirement](references/generic-migration-guide.md#3-object-integrity-requirement)
+4. **Migrator Loads Reference Docs**: Migrator Agent loads basic reference documents at startup (Generic Migration Guide, SQL Syntax Reference, Function Mapping, Data Types, source-specific guide) and additional documents on-demand based on code being migrated
+5. **Migrator Uses Pre-configured VSQL**: Migrator Agent uses the VSQL environment variable directly for unit testing — do NOT probe, inspect, or guess VSQL content
+6. **Migrator Reports Unit Test Status**: After each code snippet migration, Migrator reports whether it passed unit testing and includes complete output logs (NOTICE, WARNING, ERROR, row counts, etc.) when tests pass
+7. **Migrator Cleans Up After Unit Test**: After completing unit testing, Migrator deletes all migrated objects, test data, and temporary objects to avoid affecting subsequent functional tests
+8. **Manager, Requester, and Tester Load Minimal Docs**: These agents **NEVER read migration reference documents** (Generic Migration Guide, OLTP/OLAP Rewrite, database-specific guides). They only read the [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md). Only Migrator Agent loads migration reference documents.
+9. **Tester Uses Pre-configured VSQL**: Tester Agent uses the VSQL environment variable directly for testing — do NOT probe, inspect, or guess VSQL content
+10. **Tester Does NOT Modify Manager's Code**: Tester Agent tests the code as-is — do NOT modify test code just to make it pass. Test rules must be strictly followed. Report failures honestly with detailed error messages.
+11. **Tester Includes Complete Logs**: After each code snippet passes functional testing, Tester includes the complete output logs from VSQL (NOTICE, WARNING, ERROR messages, row counts, affected rows, return values, and any diagnostic information).
+12. **Tester Preserves Migrated Objects**: During functional testing, do NOT delete schemas, tables, views, functions, procedures, sequences, or migrated data. These are dependencies for subsequent migrations. Only delete test data or temporary objects added by Tester.
+13. **Tester Validates Everything**: Tester Agent tests every object, no skipping
+14. **Fix Loop**: If test fails, Migrator fixes and Manager retests (up to 3 attempts)
+15. **Document Failures**: Append failed migrations with detailed error documentation
+16. **Maintain Order**: Process files in alphabetical order, objects in source order
+17. **Focused Responsibilities**: Each agent has focused responsibilities - Manager coordinates, Requester reads, Migrator transforms, Tester validates.
+18. **Manager Verifies Migrator Unit Test**: Manager STRICTLY verifies Migrator's unit test results before accepting code. Checks: (1) unit test was actually performed, (2) logs are complete (NOTICE, WARNING, ERROR, row counts, return values), (3) no anomalies in logs. If verification fails, Manager REJECTS and requires Migrator to redo.
+19. **Manager Verifies Tester Test Results**: Manager STRICTLY verifies Tester's functional/integration test results before appending to target file. Checks: (1) tests were actually performed, (2) logs are complete, (3) no WARNING or ERROR anomalies in logs, (4) no false positives (errors or warnings ignored but reported as PASS). If verification fails, Manager REJECTS and requires Tester to redo.
+20. **Schema Prefix Compliance**: Migrator maintains `current_schema` context variable, updates it when encountering `USE dbname` statements, and returns it with migrated code. Manager saves this value and passes it to new Migrator instances when restarting.
 
 ### Machine Learning Best Practices
 1. **Data Quality**: Ensure clean, properly formatted training data
@@ -198,6 +342,13 @@ This skill provides comprehensive reference documentation and examples for all V
 - **Performance Degradation**: Review query plans and projection design
 - **Function Incompatibilities**: Use the function mapping guide for alternatives
 - **Transaction Issues**: Understand Vertica's transaction model differences
+
+### Multi-Agent Migration Issues
+- **Requester Context Overflow**: Restart Requester Agent with fresh context, reduce section size (limit=50), verify source file is accessible
+- **Migrator Context Overflow**: Restart Migrator Agent with fresh context
+- **Tester Connection Failure**: Check database connection, recreate Tester Agent
+- **Communication Failure**: Retry up to 3 times, Manager takes over if needed
+- **Test Failures Loop**: Maximum 3 fix attempts, then document and append with warnings
 
 ### Machine Learning Issues
 - **Model Convergence**: Check data quality and adjust algorithm parameters

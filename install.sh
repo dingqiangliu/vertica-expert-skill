@@ -44,15 +44,19 @@ echo -e "📁 Installation path: ${YELLOW}$SKILL_PATH${NC}"
 echo -e "\n📂 Creating installation directory..."
 mkdir -p "$SKILL_PATH"
 
-# Copy all skill files
+# Copy skill files (excluding CLAUDE.md, examples/, slides/ - not needed for users)
 echo -e "📋 Copying skill files..."
-cp -r ./* "$SKILL_PATH/"
+cp -r references "$SKILL_PATH/"
+cp SKILL.md "$SKILL_PATH/"
+cp README.md "$SKILL_PATH/"
+cp install.sh "$SKILL_PATH/"
+cp uninstall.sh "$SKILL_PATH/"
 
 # No scripts to make executable
 
 # Validate installation
 echo -e "\n✅ Validating installation..."
-if [ -f "$SKILL_PATH/SKILL.md" ] && [ -f "$SKILL_PATH/CLAUDE.md" ]; then
+if [ -f "$SKILL_PATH/SKILL.md" ]; then
     echo -e "${GREEN}✓ Core skill files installed${NC}"
 else
     echo -e "${RED}❌ Core skill files missing${NC}"
@@ -74,9 +78,7 @@ echo -e "📍 Skill installed to: ${GREEN}$SKILL_PATH${NC}"
 echo ""
 echo "📋 Installed components:"
 echo "   • Main skill definition (SKILL.md)"
-echo "   • Internal documentation (CLAUDE.md)"
 echo "   • Reference guides"
-echo "   • Demonstration examples"
 echo ""
 echo "🚀 Usage:"
 echo "   • Ask Claude to convert SQL queries to Vertica"
@@ -85,7 +87,6 @@ echo "   • Get optimization recommendations for queries"
 echo ""
 echo "📚 Documentation:"
 echo "   • README.md - Overview and getting started"
-echo "   • demo.md - Example migrations and optimizations"
 echo "   • references/ - Detailed technical guides"
 echo "=============================================================================="
 

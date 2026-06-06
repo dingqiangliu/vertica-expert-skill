@@ -350,10 +350,121 @@ for i, (title, desc) in enumerate(prohibitions):
 add_footer(slide)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# SLIDE 6 — Multi-Agent Migration Workflow
+# ═══════════════════════════════════════════════════════════════════════════════
+
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+add_background(slide, WHITE)
+add_title_bar(slide, "Multi-Agent Migration Workflow", "Professional agents of a team collaborating on large-scale migration")
+
+# Manager Agent at center
+manager_card = add_shape(slide, Inches(5.5), Inches(4.5), Inches(2.4), Inches(1.6), SOFT_BLUE, border_color=DARK_BLUE, border_width=Pt(2.5))
+add_text_box(slide, Inches(5.5), Inches(4.55), Inches(2.4), Inches(0.3),
+             "Manager Agent", font_size=12, color=DARK_BLUE, bold=True, alignment=PP_ALIGN.CENTER)
+manager_desc = [
+    "Controls workflow",
+    "Dispatches tasks",
+    "Coordinates testing",
+    "Appends to target"
+]
+add_text_box(slide, Inches(5.6), Inches(4.9), Inches(2.2), Inches(1.12),
+             '\n'.join([f"• {desc}" for desc in manager_desc]), font_size=10, color=DARK_TEXT)
+
+# Requester Agent (top-left)
+requester_card = add_shape(slide, Inches(5.5), Inches(1.3), Inches(2.4), Inches(1.6), SOFT_PURPLE, border_color=PURPLE, border_width=Pt(2))
+add_text_box(slide, Inches(5.5), Inches(1.35), Inches(2.4), Inches(0.3),
+             "Requester Agent", font_size=12, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+requester_desc = [
+    "Reads files section-by-section",
+    "Uses Read(offset, limit)",
+    "Identifies objects",
+    "Maintains reading state"
+]
+add_text_box(slide, Inches(5.6), Inches(1.7), Inches(2.2), Inches(1.12),
+             '\n'.join([f"• {desc}" for desc in requester_desc]), font_size=10, color=DARK_TEXT)
+
+# Migrator Agent (bottom-left)
+migrator_card = add_shape(slide, Inches(0.5), Inches(4.5), Inches(2.4), Inches(1.6), SOFT_ORANGE, border_color=ORANGE, border_width=Pt(2))
+add_text_box(slide, Inches(0.5), Inches(4.55), Inches(2.4), Inches(0.3),
+             "Migrator Agent", font_size=12, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+migrator_desc = [
+    "Code transformation",
+    "Loads docs on-demand",
+    "Unit tests code",
+    "Returns verified code"
+]
+add_text_box(slide, Inches(0.6), Inches(4.9), Inches(2.2), Inches(1.12),
+             '\n'.join([f"• {desc}" for desc in migrator_desc]), font_size=10, color=DARK_TEXT)
+
+# Tester Agent (right)
+tester_card = add_shape(slide, Inches(10.4), Inches(4.5), Inches(2.4), Inches(1.6), SOFT_GREEN, border_color=GREEN, border_width=Pt(2))
+add_text_box(slide, Inches(10.4), Inches(4.55), Inches(2.4), Inches(0.3),
+             "Tester Agent", font_size=12, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+tester_desc = [
+    "Functional testing",
+    "Integration testing",
+    "Complete logs check",
+    "Pass/fail feedback"
+]
+add_text_box(slide, Inches(10.5), Inches(4.9), Inches(2.2), Inches(1.22),
+             '\n'.join([f"• {desc}" for desc in tester_desc]), font_size=10, color=DARK_TEXT)
+
+# Arrows between Manager and other agents
+
+# Requester → Manager (REQUEST_READ - arrow pointing down)
+arrow_req_mgr = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.7), Inches(3.2), Inches(0.3), Inches(1.0))
+arrow_req_mgr.fill.solid()
+arrow_req_mgr.fill.fore_color.rgb = PURPLE
+arrow_req_mgr.line.fill.background()
+add_text_box(slide, Inches(6.8), Inches(3.65), Inches(1.7), Inches(0.2), "REQUEST_READ", font_size=6.5, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+
+# Manager → Requester (READ_RESPONSE - arrow pointing up)
+arrow_mgr_req = slide.shapes.add_shape(MSO_SHAPE.UP_ARROW, Inches(6.3), Inches(3.2), Inches(0.3), Inches(1.0))
+arrow_mgr_req.fill.solid()
+arrow_mgr_req.fill.fore_color.rgb = PURPLE
+arrow_mgr_req.line.fill.background()
+add_text_box(slide, Inches(4.8), Inches(3.65), Inches(1.7), Inches(0.2), "READ_RESPONSE", font_size=6.5, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+
+# Migrator → Manager (MIGRATE_REQUEST - arrow pointing right)
+arrow_mig_mgr = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(3.1), Inches(5.1), Inches(2.3), Inches(0.3))
+arrow_mig_mgr.fill.solid()
+arrow_mig_mgr.fill.fore_color.rgb = ORANGE
+arrow_mig_mgr.line.fill.background()
+add_text_box(slide, Inches(3.3), Inches(4.85), Inches(1.7), Inches(0.2), "MIGRATE_REQUEST", font_size=6.5, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+
+# Manager → Migrator (MIGRATE_RESPONSE - arrow pointing left)
+arrow_mgr_mig = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(3.1), Inches(5.5), Inches(2.3), Inches(0.3))
+arrow_mgr_mig.fill.solid()
+arrow_mgr_mig.fill.fore_color.rgb = ORANGE
+arrow_mgr_mig.line.fill.background()
+add_text_box(slide, Inches(3.3), Inches(5.85), Inches(1.7), Inches(0.2), "MIGRATE_RESPONSE", font_size=6.5, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+
+# Manager → Tester (TEST_REQUEST - arrow pointing right)
+arrow_mgr_tst = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(8.0), Inches(5.0), Inches(2.3), Inches(0.3))
+arrow_mgr_tst.fill.solid()
+arrow_mgr_tst.fill.fore_color.rgb = GREEN
+arrow_mgr_tst.line.fill.background()
+add_text_box(slide, Inches(8.5), Inches(4.85), Inches(1.7), Inches(0.2), "TEST_REQUEST", font_size=6.5, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+
+# Tester → Manager (TEST_RESPONSE - arrow pointing left)
+arrow_tst_mgr = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(8.0), Inches(5.5), Inches(2.3), Inches(0.3))
+arrow_tst_mgr.fill.solid()
+arrow_tst_mgr.fill.fore_color.rgb = GREEN
+arrow_tst_mgr.line.fill.background()
+add_text_box(slide, Inches(8.5), Inches(5.85), Inches(1.7), Inches(0.2), "TEST_RESPONSE", font_size=6.5, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+
+# Benefits section
+benefits_box = add_shape(slide, Inches(0.5), Inches(6.3), Inches(12.3), Inches(0.6), LIGHT_GRAY, border_color=DARK_BLUE, border_width=Pt(1))
+add_text_box(slide, Inches(0.7), Inches(6.32), Inches(12), Inches(0.55),
+             "Benefits: Context isolation prevents overflow • Specialized agents ensure rule compliance • Scalable for large migrations • Clear separation of concerns",
+             font_size=12, color=DARK_TEXT, alignment=PP_ALIGN.CENTER)
+
+add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 6 — Core Reference Documentation
+# SLIDE 7 — Core Reference Documentation
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -397,7 +508,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 7 — OLTP→OLAP Pattern 1: Adjacent DML Merging
+# SLIDE 8 — OLTP→OLAP Pattern 1: Adjacent DML Merging
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -471,7 +582,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 8 — OLTP→OLAP Pattern 2: Loop-DML → Set-Based SQL
+# SLIDE 9 — OLTP→OLAP Pattern 2: Loop-DML → Set-Based SQL
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -551,7 +662,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 9 — OLTP→OLAP Pattern 3: Cursor → Window Functions
+# SLIDE 10 — OLTP→OLAP Pattern 3: Cursor → Window Functions
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -631,7 +742,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 10 — OLTP→OLAP Pattern 4 & 5
+# SLIDE 11 — OLTP→OLAP Pattern 4 & 5
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -715,7 +826,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 11 — User-Defined SQL Functions
+# SLIDE 12 — User-Defined SQL Functions
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -785,7 +896,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 12 — PL/vSQL Stored Procedures
+# SLIDE 13 — PL/vSQL Stored Procedures
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -838,7 +949,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 13 — Parameter DEFAULT Keyword Limitation
+# SLIDE 14 — Parameter DEFAULT Keyword Limitation
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -919,7 +1030,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 14 — Function Migration Strategies (Oracle & DB2)
+# SLIDE 15 — Function Migration Strategies (Oracle & DB2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -1002,7 +1113,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 15 — Common Migration Challenges (Oracle & DB2)
+# SLIDE 16 — Common Migration Challenges (Oracle & DB2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -1064,7 +1175,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 16 — Common Migration Challenges (SQL Server)
+# SLIDE 17 — Common Migration Challenges (SQL Server)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -1114,10 +1225,11 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 17 — UDx Development
+# SLIDE 18 — UDx Development (HIDDEN)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
+slide.Hidden = True  # Hide this slide
 add_background(slide, WHITE)
 add_title_bar(slide, "UDx Custom Function Development", "User-Defined Extensions in C++, Python, Java, and R")
 
@@ -1148,10 +1260,11 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 18 — Machine Learning in Vertica
+# SLIDE 19 — Machine Learning in Vertica
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
+slide.Hidden = True  # Hidden slide
 add_background(slide, WHITE)
 add_title_bar(slide, "In-Database Machine Learning", "Complete ML lifecycle without data movement")
 
@@ -1198,10 +1311,11 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 19 — Performance Optimization
+# SLIDE 20 — Performance Optimization
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
+slide.Hidden = True  # Hidden slide
 add_background(slide, WHITE)
 add_title_bar(slide, "Performance Optimization", "Leveraging Vertica's columnar MPP architecture")
 
@@ -1250,7 +1364,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 20 — VSQL Testing Framework
+# SLIDE 21 — VSQL Testing Framework
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -1326,7 +1440,7 @@ add_footer(slide)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SLIDE 21 — Summary & Key Takeaways
+# SLIDE 22 — Summary & Key Takeaways
 # ═══════════════════════════════════════════════════════════════════════════════
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])

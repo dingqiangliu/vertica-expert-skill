@@ -106,6 +106,12 @@ When Migrator returns code with "Unit Test Status: PASSED", Manager MUST verify:
 
 **Manager can ONLY accept code that passes unit test verification AND functional testing verification.**
 
+**Manager's Integration Test Failure Handling:**
+When Tester reports integration test failure:
+1. ✅ **Forward error information and ALL migration target files to Migrator** - Migrator needs all target files to fix issues
+2. ✅ **Wait for Migrator to fix and pass unit tests** - Verify Migrator's unit test results
+3. ✅ **Instruct Tester to clear test database and re-run integration test from scratch** - Tester clears test database completely and re-executes all migrated files
+
 **🚫 ABSOLUTELY PROHIBITED**: 
 - **NEVER provide migration transformation rules or decisions to Migrator** — Manager has NO migration expertise
   - NEVER tell Migrator how to migrate code
@@ -315,6 +321,7 @@ FOR each source file (in alphabetical order):
            - IF request for complete code (snippet was incomplete) → GOTO step 1 (request complete snippet)
         4. FUNCTIONAL TEST via Tester Agent:
            - **PASS current_schema to Tester** in TEST_REQUEST (Tester uses it to set SEARCH_PATH)
+           - **SET Test Type: FUNCTIONAL** in TEST_REQUEST
            - Tester validates the migrated code works correctly
            - Checks complete output logs (NOTICE, WARNING, ERROR)
            - Verifies results are consistent with the code's purpose
@@ -337,20 +344,20 @@ FOR each source file (in alphabetical order):
 Phase 2: Integration Testing (after ALL objects migrated)
 1. Manager instructs Tester to:
    - **PASS EMPTY current_schema to Tester** in TEST_REQUEST (Tester sees empty value, does NOT set SEARCH_PATH)
-   - DROP all test objects
+   - **SET Test Type: INTEGRATION** in TEST_REQUEST
+   - Clear test database completely
    - Execute ALL migrated files in filename order (no SEARCH_PATH set, executes exactly as migrated)
    - Run complete integration test
 2. IF integration test passes:
        ✅ Migration complete
    ELSE:
-       - Tester reports failures to Manager
-       - Manager dispatches fixes to Migrator
-       - Migrator fixes code and unit tests
-       - Tester runs functional test on fixed code (with current_schema for SEARCH_PATH)
-       - IF functional test passes:
-             Tester runs integration test again from scratch (with empty current_schema)
-           ELSE:
-             Repeat fix → functional test cycle
+       - Tester reports failures to Manager with complete error logs
+       - Manager forwards error information and ALL migration target files to Migrator
+       - Migrator analyzes errors and fixes issues on the relevant migration target files and runs unit tests
+       - After Migrator passes unit tests, Manager instructs Tester to:
+         - Clear test database completely
+         - Re-run integration test from scratch (execute all migrated files in filename order)
+       - If integration test still fails: Repeat fix → unit test → integration test cycle
        - Continue until integration test passes completely
 ```
 
@@ -454,6 +461,20 @@ ON RECEIVE additional test failure report from Manager:
        ELSE:
            CONTINUE fixing and retesting
     6. LOG fix for future reference
+
+ON RECEIVE integration test failure report from Manager (includes error logs and ALL migration target files):
+    1. ANALYZE integration test error logs to identify issues
+    2. DETERMINE which target files need fixes
+    3. FIX issues on the relevant migration target files
+    4. UNIT TEST the fixed code to ensure changes work correctly
+    5. IF unit test PASSES:
+           REPORT unit test status: PASSED
+           INCLUDE complete output logs from VSQL
+           RETURN to Manager for re-running integration test
+       ELSE:
+           CONTINUE fixing and retesting on the migration target files
+    6. LOG fix for future reference
+    **Note: After Migrator fixes and passes unit tests, Tester will clear test database and re-run integration test from scratch**
 ````
 
 ### Tester Agent Workflow
@@ -503,11 +524,16 @@ ON RECEIVE migrated code from Manager:
 INTEGRATION TEST (called after ALL objects migrated):
 ON RECEIVE instruction from Manager to run integration test:
     Manager's test request will have `current_schema` = EMPTY
-    1. DROP all test objects from database
+    1. Clear test database completely
     2. Execute ALL migrated files in filename order (current_schema is empty, so no SEARCH_PATH set)
     3. Verify all objects exist and are functional
-    4. Report integration test results
-    5. IF FAIL: identify which objects failed and why
+    4. Report integration test results with complete logs
+    5. IF FAIL: identify which objects failed and why, include complete error logs
+    6. IF FAIL: Manager will forward error info and ALL migration target files to Migrator for fix
+    7. AFTER MIGRATOR FIXES AND PASSES UNIT TESTS: Manager instructs Tester to:
+       - Clear test database completely
+       - Re-run integration test from scratch (execute all migrated files in filename order)
+       - Report results again
 ````
 
 ---
@@ -669,6 +695,7 @@ Potential Issues: [any concerns]
 TEST_REQUEST
 ---
 Current Schema: [current_schema value or empty]  ← Manager passes saved current_schema for functional testing
+Test Type: FUNCTIONAL
 Migrated Code:
 ```
 [code]
@@ -681,6 +708,12 @@ TEST_REQUEST
 ---
 Current Schema: [ALWAYS EMPTY]  ← Manager passes empty current_schema for integration testing
 Test Type: INTEGRATION
+Migration Target Files:
+```
+[migrated_file_01.sql]
+[migrated_file_02.sql]
+[migrated_file_03.sql]
+```
 ````
 
 **Notes**:
@@ -694,15 +727,20 @@ Test Type: INTEGRATION
 TEST_RESPONSE
 ---
 Status: [PASS|FAIL]
+Test Type: [FUNCTIONAL|INTEGRATION]
 Execution Results: [output from test]
 Complete Logs (if PASS):
 ```
-[Complete output logs from VSQL including NOTICE, WARNING, ERROR messages, 
+[Complete output logs from VSQL including NOTICE, WARNING, ERROR messages,
 row counts, affected rows, return values, and any diagnostic information]
 ```
 Error Details: [if FAIL]
-Suggested Fixes: [if FAIL]
 ````
+
+**For Integration Test Failure:**
+When integration test fails, Manager forwards this information to Migrator:
+- Complete error logs
+- ALL migration target files
 
 ---
 
@@ -731,6 +769,7 @@ In a **single $VSQL call**, Tester:
 
 ### Test Execution Flow
 
+**Functional Testing (Phase 1 - Per-Snippet):**
 ```
 Manager receives migrated code (already unit tested by Migrator)
     ↓
@@ -751,6 +790,29 @@ Migrator fixes and unit tests the corrected code
 Manager retests via Tester Agent
     ↓
 IF still FAIL after 3 attempts: document and append with warnings
+```
+
+**Integration Testing (Phase 2 - After ALL Objects Migrated):**
+```
+Manager instructs Tester to run integration test (empty current_schema)
+    ↓
+Tester clears test database and executes ALL migrated files in filename order
+    ↓
+Tester returns PASS/FAIL with complete logs
+    ↓
+IF PASS: Migration complete ✅
+IF FAIL: Tester reports failures with complete error logs to Manager
+    ↓
+Manager forwards error information and ALL migration target files to Migrator
+    ↓
+Migrator analyzes errors and fixes issues on the relevant target files and runs unit tests
+    ↓
+After Migrator passes unit tests, Manager instructs Tester to:
+    - Clear test database completely
+    - Re-run integration test from scratch
+    ↓
+IF still FAIL: Repeat fix → unit test → integration test cycle
+IF PASS: Migration complete ✅
 ```
 
 ---
@@ -993,6 +1055,7 @@ Required Action:
 - **Tester Agent MUST include complete logs** — after each code snippet passes functional testing, include the complete output logs from $VSQL
 - **Tester Agent MUST test the whole migrated  code snippet or file** — no skipping
 - **Tester Agent MUST preserve migrated objects** — do NOT delete schemas, tables, views, functions, procedures, sequences, or migrated data during functional testing
+- **Tester Agent MUST clear test database and re-run integration test from scratch after Migrator fixes** — when integration test fails and Migrator fixes the migration target files, Tester must clear the entire test database and re-run integration testing from scratch
 - **Manager MUST verify Tester's test results** — check that tests were actually performed, logs are complete, no anomalies exist, and no false positives (errors ignored but reported as PASS). REJECT and require redo if verification fails
 - **ALL agents MUST preserve object boundaries** — no splitting procedures, functions or statements
 - **ALL agents MUST rewrite OLTP→OLAP** — no cursors, row-by-row DML
@@ -1081,8 +1144,14 @@ When processing each code snippet, Migrator analyzes the code content and loads 
 - ✅ **Pass `current_schema` to new Migrator instance** - When restarting Migrator agent, include the saved `current_schema` value in the initialization context.
 - ✅ **Pass `current_schema` to Tester for functional testing** - Include the saved `current_schema` value in TEST_REQUEST when asking Tester to perform functional testing.
 - ✅ **Pass empty `current_schema` to Tester for integration testing** - Include empty `current_schema` in TEST_REQUEST when asking Tester to perform integration testing.
+- ✅ **Set Test Type in TEST_REQUEST** - Always include `Test Type: FUNCTIONAL` for functional testing or `Test Type: INTEGRATION` for integration testing.
+- ✅ **Pass migration target files for integration testing** - Include the list of all migration target files in TEST_REQUEST when asking Tester to perform integration testing.
 - ✅ **Verify Schema Prefix Requirement compliance** - Check that Migrator correctly uses `current_schema` as schema prefixes for CREATE objects without schema.
 - ✅ **Enforce all rules strictly** - Any deviation from rules is rejected and corrected immediately.
+- ✅ **Handle integration test failures correctly** - When Tester reports integration test failure:
+  1. Forward error information and ALL migration target files to Migrator
+  2. Wait for Migrator to fix and pass unit tests
+  3. Instruct Tester to clear test database and re-run integration test from scratch
 
 **What you MUST NEVER do:**
 - ❌ **NEVER read source files** - You do not have this knowledge or capability. Only Requester Agent reads files.
@@ -1272,6 +1341,7 @@ End Of File: NO
 ````
 
 **Initialization Command:**
+
 ```
 Agent(
   description="Requester Agent",
@@ -1430,15 +1500,21 @@ Return:
 ## Fix Request Format
 
 If test fails, Manager will send:
+
+**For Functional Test Fix:**
 - Original source code
 - Previous migration attempt
 - Test error details
-- Suggested fixes
+
+**For Integration Test Fix:**
+- Integration test error logs
+- ALL migration target files (complete content)
 
 Return corrected code with changes documented.
 ````
 
 **Initialization Command:**
+
 ```
 Agent(
   description="Migrator Agent",
@@ -1484,6 +1560,8 @@ Receive migrated code from the Manager Agent and test it in a Vertica environmen
 
 ## Test Method
 
+**For Functional Testing (Test Type: FUNCTIONAL):**
+
 In a **single $VSQL call**:
 
 1. **Set SEARCH_PATH (if current_schema is not empty)**:
@@ -1492,21 +1570,36 @@ In a **single $VSQL call**:
    SET SEARCH_PATH = <current_schema>, "$user", public, v_catalog, v_monitor, v_internal, v_func, pg_catalog;
    ```
    This ensures migrated objects can be found without schema prefixes.
-   IF `current_schema` is empty (e.g., during integration testing), skip this step.
 
-2. **Enable autocommit**:
+2. **Enable autocommit and execute migrated code**:
 ```sql
 SET SESSION AUTOCOMMIT TO ON;
 
 {migrated code}
-or
-\i {migrated file}
 ```
-
-3. **Execute ONLY the migrated code snippet or code file** - nothing else, no additions
 
 3. **Verify results**:
    - Code executes successfully (no ERROR: in logs)
+   - Data commits successfully
+   - No warnings (WARNING:) in logs
+
+**For Integration Testing (Test Type: INTEGRATION):**
+
+In a **single $VSQL call**:
+
+1. **Clear test database completely** (current_schema is empty, skip SEARCH_PATH)
+
+2. **Enable autocommit and execute all migrated files**:
+```sql
+SET SESSION AUTOCOMMIT TO ON;
+
+\i migrated_file_01.sql
+\i migrated_file_02.sql
+\i migrated_file_03.sql
+```
+
+3. **Verify results**:
+   - All files execute successfully (no ERROR: in logs)
    - Data commits successfully
    - No warnings (WARNING:) in logs
 
@@ -1542,17 +1635,18 @@ or
 ## Input Format
 
 Manager will send:
-- Migrated code
+- **Test Type**: FUNCTIONAL or INTEGRATION
 - **current_schema** (optional) - The current schema context for functional testing, or empty for integration testing
+- **Migrated code** (for functional testing) or **Migration Target Files** (for integration testing)
 
 ## Output Format
 
 Return:
 - Status: PASS or FAIL
+- Test Type: FUNCTIONAL or INTEGRATION
 - Execution results
 - Complete output logs (if PASS): NOTICE, WARNING, ERROR messages, row counts, affected rows, return values, diagnostic info
 - Error details (if FAIL)
-- Suggested fixes (if FAIL)
 ````
 
 **Initialization Command:**
@@ -1644,6 +1738,7 @@ WHILE not end of CURRENT_FILE:
     # Step 4: Test migrated code (only after unit test verification passes)
     TEST_REQUEST = {
         "current_schema": migration_result.current_schema,  # Pass saved current_schema for functional testing
+        "test_type": "FUNCTIONAL"
         "migrated_code": migration_result.migrated_code
     }
     
@@ -1736,7 +1831,6 @@ WHILE not end of CURRENT_FILE:
 -- FAILED MIGRATION
 -- Source File: {CURRENT_FILE}
 -- Error: {retest_result.error_details}
--- Suggested Fixes: {retest_result.suggested_fixes}
 --
 -- Original Code:
 {code}
@@ -1832,7 +1926,7 @@ offset = 1
 
 Manager sends TEST_REQUEST with `current_schema` = EMPTY. Tester sees empty value and does NOT set SEARCH_PATH.
 
-1. DROP all test objects from database
+1. Clear test database completely
    ```sql
    do $$
    declare sql varchar;
@@ -1881,12 +1975,13 @@ Manager sends TEST_REQUEST with `current_schema` = EMPTY. Tester sees empty valu
    - If FAIL: Identify which objects failed and why
 
 **If Integration Test Fails:**
-   - Tester reports failures to Manager
-   - Manager dispatches fixes to Migrator
-   - Migrator fixes code and unit tests
-   - Tester runs functional test on fixed code
-   - If functional test passes: Tester runs integration test again from scratch
-   - If functional test fails: Repeat fix → functional test cycle
+   - Tester reports failures to Manager with complete error logs
+   - Manager forwards error information and ALL migration target files to Migrator
+   - Migrator analyzes errors and fixes issues on the relevant migration target files and runs unit tests
+   - After Migrator passes unit tests, Manager instructs Tester to:
+     - Clear test database completely (drop all test objects)
+     - Re-run integration test from scratch (execute all migrated files in filename order)
+   - If integration test still fails: Repeat fix → unit test → integration test cycle
    - Continue until integration test passes completely
 ````
 
@@ -2053,6 +2148,7 @@ End Of File: NO
 
 ````
 Source Database: oracle
+Current Schema: [current_schema value or empty]
 Code:
 ```
 CREATE OR REPLACE PROCEDURE get_employee_count(
@@ -2108,6 +2204,7 @@ Potential Issues: None identified
 **TEST_REQUEST**
 ````
 Current Schema: [current_schema value or empty]  ← Manager passes saved current_schema for functional testing
+Test Type: FUNCTIONAL
 Migrated Code:
 ```
 CREATE OR REPLACE PROCEDURE get_employee_count(
@@ -2138,7 +2235,6 @@ NOTICE: Procedure created successfully
 NOTICE: CALL completed successfully, p_count = 25
 ```
 Error Details: None
-Suggested Fixes: None
 ````
 
 ### Manager Appends to Target File

@@ -192,7 +192,7 @@ badges = [
     ("5", "Migration Paths", ORANGE),
     ("100+", "Function Mappings", GREEN),
     ("7", "ML Algorithms", TEAL),
-    ("17", "Reference Guides", PURPLE),
+    ("18", "Reference Guides", PURPLE),
 ]
 for i, (num, label, color) in enumerate(badges):
     y_pos = Inches(1.2 + i * 1.3)
@@ -469,7 +469,7 @@ add_footer(slide)
 
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 add_background(slide, WHITE)
-add_title_bar(slide, "Core Reference Documentation", "17 comprehensive guides organized in a hierarchical structure")
+add_title_bar(slide, "Core Reference Documentation", "18 comprehensive guides organized in a hierarchical structure")
 
 add_shape(slide, Inches(0.5), Inches(1.3), Inches(12.3), Inches(0.6), SOFT_RED, border_color=RED, border_width=Pt(1.5))
 add_text_box(slide, Inches(0.7), Inches(1.35), Inches(12), Inches(0.5),
@@ -1455,7 +1455,7 @@ takeaways = [
     ("5", "OLTP→OLAP Patterns", "Rewrite procedural code to set-based SQL for columnar performance", TEAL),
     ("4", "UDx Languages", "C++, Python, Java, R for custom function development", PURPLE),
     ("4", "ML Categories", "Regression, classification, clustering, time series", RED),
-    ("17", "Reference Guides", "Comprehensive documentation for every aspect", ACCENT_BLUE),
+    ("18", "Reference Guides", "Comprehensive documentation for every aspect", ACCENT_BLUE),
 ]
 
 for i, (num, title, desc, color) in enumerate(takeaways):

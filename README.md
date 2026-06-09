@@ -239,9 +239,9 @@ Phase 1: Migration & Functional Testing (per source file, alphabetical order)
   → FAIL → REQUEST fix from Migrator → RETEST
 
 Phase 2: Integration Testing (after ALL objects migrated)
-  Tester drops test objects → executes ALL files in order → runs integration test
+  Tester clears test database completely → executes ALL files in order → runs integration test
   → PASS → ✅ Migration complete
-  → FAIL → Migrator fixes → functional test → integration test (repeat until pass)
+  → FAIL → Tester reports failures with complete logs → Manager forwards error info and ALL target files to Migrator → Migrator analyzes errors and fixes issues on relevant target files and runs unit tests → Tester clears test database and re-runs integration test from scratch → Repeat until pass
 ```
 
 **Manager's Strict Limits:**

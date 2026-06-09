@@ -106,6 +106,12 @@ When Migrator returns code with "Unit Test Status: PASSED", Manager MUST verify:
 
 **Manager can ONLY accept code that passes unit test verification AND functional testing verification.**
 
+**Manager's Integration Test Failure Handling:**
+When Tester reports integration test failure:
+1. ✅ **Forward error information and ALL migration target files to Migrator** - Migrator needs all target files to fix issues
+2. ✅ **Wait for Migrator to fix and pass unit tests** - Verify Migrator's unit test results
+3. ✅ **Instruct Tester to clear test database and re-run integration test from scratch** - Tester clears test database completely and re-executes all migrated files
+
 **🚫 ABSOLUTELY PROHIBITED**: 
 - **NEVER provide migration transformation rules or decisions to Migrator** — Manager has NO migration expertise
   - NEVER tell Migrator how to migrate code
@@ -303,18 +309,22 @@ FOR each source file (in alphabetical order):
     current_schema = empty  ← Initialize schema tracking
     
     WHILE not end of source file:
-        1. REQUEST next code snippet from Requester Agent
+        1. REQUEST next code snippet from **existing requester_agent via SendMessage**
+           - Send: READ_REQUEST format with Source File, Offset, Limit
            - Requester reads section (offset=N, limit=50)
            - Requester ensures no objects or statements are broken
            - Requester returns code sections as a snippet to Manager
-        2. DISPATCH code snippet to Migrator Agent (pass current_schema if Migrator restarted)
+        2. DISPATCH code snippet to **existing migrator_agent via SendMessage**
+           - Send: MIGRATE_REQUEST format with Source Database, Current Schema, Code
+           - Include current_schema in the task context
         3. RECEIVE response from Migrator:
            - IF migrated code (Migrator has already unit tested):
                SAVE current_schema from Migrator's response  ← Update schema context
                GOTO step 4
            - IF request for complete code (snippet was incomplete) → GOTO step 1 (request complete snippet)
-        4. FUNCTIONAL TEST via Tester Agent:
-           - **PASS current_schema to Tester** in TEST_REQUEST (Tester uses it to set SEARCH_PATH)
+        4. FUNCTIONAL TEST via **existing tester_agent via SendMessage**
+           - Send: TEST_REQUEST format with Current Schema, Test Type: FUNCTIONAL, Migrated Code
+           - **PASS current_schema to Tester** in task (Tester uses it to set SEARCH_PATH)
            - Tester validates the migrated code works correctly
            - Checks complete output logs (NOTICE, WARNING, ERROR)
            - Verifies results are consistent with the code's purpose
@@ -322,11 +332,12 @@ FOR each source file (in alphabetical order):
                APPEND to target file
                CONTINUE to next snippet
            ELSE:
-               REQUEST fix from Migrator (include Tester's error details)
+               SEND FIX REQUEST to **existing migrator_agent via SendMessage**
+               - Send: "FIX this error" + original code + error details
                Migrator fixes and unit tests
                GOTO step 4 (re-test with Tester)
         6. REPEAT for next snippet
-    
+
     CLOSE target file
 
 🚨 ABSOLUTE RULE: Manager MUST NOT read source files
@@ -334,23 +345,27 @@ FOR each source file (in alphabetical order):
    - Manager coordinates workflow but NEVER accesses source file content
    - This separation ensures sequential processing and prevents context overflow
 
+🚨 ABSOLUTE RULE: Manager MUST NOT re-spawn agents for each task
+   - Use SendMessage to send tasks to existing background agents
+   - ONLY re-initialize agents if they crash or become unresponsive
+
 Phase 2: Integration Testing (after ALL objects migrated)
-1. Manager instructs Tester to:
-   - **PASS EMPTY current_schema to Tester** in TEST_REQUEST (Tester sees empty value, does NOT set SEARCH_PATH)
-   - DROP all test objects
+1. Manager instructs **existing tester_agent via SendMessage** to:
+   - **PASS EMPTY current_schema** (Tester sees empty value, does NOT set SEARCH_PATH)
+   - **SET Test Type: INTEGRATION** in TEST_REQUEST
+   - Clear test database completely
    - Execute ALL migrated files in filename order (no SEARCH_PATH set, executes exactly as migrated)
    - Run complete integration test
 2. IF integration test passes:
        ✅ Migration complete
    ELSE:
-       - Tester reports failures to Manager
-       - Manager dispatches fixes to Migrator
-       - Migrator fixes code and unit tests
-       - Tester runs functional test on fixed code (with current_schema for SEARCH_PATH)
-       - IF functional test passes:
-             Tester runs integration test again from scratch (with empty current_schema)
-           ELSE:
-             Repeat fix → functional test cycle
+       - Tester reports failures to Manager with complete error logs
+       - Manager forwards error information and ALL migration target files to **existing migrator_agent via SendMessage**
+       - Migrator analyzes errors and fixes issues on the relevant migration target files and runs unit tests
+       - After Migrator passes unit tests, Manager instructs **existing tester_agent via SendMessage** to:
+         - Clear test database completely
+         - Re-run integration test from scratch (execute all migrated files in filename order)
+       - If integration test still fails: Repeat fix → unit test → integration test cycle
        - Continue until integration test passes completely
 ```
 
@@ -363,7 +378,7 @@ ON INITIALIZATION:
     🚫 **DO NOT load migration reference documents** (Generic Migration Guide, OLTP/OLAP Rewrite, database-specific guides)
     INITIALIZE file reading state
 
-ON RECEIVE REQUEST_READ from Manager:
+ON RECEIVE READ_REQUEST from Manager:
     1. READ section from source file using Read(offset=N, limit=50)
     2. CHECK: Does section end mid-object or mid-statement?
            IF yes: CONTINUE reading until object/statement is complete
@@ -431,6 +446,7 @@ ON RECEIVE code snippet from Manager:
                - Test data inserted for testing
                - Any other artifacts from unit testing
                (This ensures subsequent functional tests are not affected)
+           🚫 DROP SCHEMA is STRICTLY PROHIBITED during cleanup — dropping schemas will destroy Tester's functional testing environment
            RETURN migrated code with test results and complete logs to Manager
        ELSE:
            FIX issues and GOTO step 5 (retry unit test)
@@ -454,6 +470,20 @@ ON RECEIVE additional test failure report from Manager:
        ELSE:
            CONTINUE fixing and retesting
     6. LOG fix for future reference
+
+ON RECEIVE integration test failure report from Manager (includes error logs and ALL migration target files):
+    1. ANALYZE integration test error logs to identify issues
+    2. DETERMINE which target files need fixes
+    3. FIX issues on the relevant migration target files
+    4. UNIT TEST the fixed code to ensure changes work correctly
+    5. IF unit test PASSES:
+           REPORT unit test status: PASSED
+           INCLUDE complete output logs from VSQL
+           RETURN to Manager for re-running integration test
+       ELSE:
+           CONTINUE fixing and retesting on the migration target files
+    6. LOG fix for future reference
+    **Note: After Migrator fixes and passes unit tests, Tester will clear test database and re-run integration test from scratch**
 ````
 
 ### Tester Agent Workflow
@@ -503,11 +533,16 @@ ON RECEIVE migrated code from Manager:
 INTEGRATION TEST (called after ALL objects migrated):
 ON RECEIVE instruction from Manager to run integration test:
     Manager's test request will have `current_schema` = EMPTY
-    1. DROP all test objects from database
+    1. Clear test database completely
     2. Execute ALL migrated files in filename order (current_schema is empty, so no SEARCH_PATH set)
     3. Verify all objects exist and are functional
-    4. Report integration test results
-    5. IF FAIL: identify which objects failed and why
+    4. Report integration test results with complete logs
+    5. IF FAIL: identify which objects failed and why, include complete error logs
+    6. IF FAIL: Manager will forward error info and ALL migration target files to Migrator for fix
+    7. AFTER MIGRATOR FIXES AND PASSES UNIT TESTS: Manager instructs Tester to:
+       - Clear test database completely
+       - Re-run integration test from scratch (execute all migrated files in filename order)
+       - Report results again
 ````
 
 ---
@@ -595,7 +630,7 @@ Document:
 ### Manager → Requester Message Format
 
 ```
-REQUEST_READ
+READ_REQUEST
 ---
 Request ID: [unique_id]
 Source File: [filename]
@@ -669,6 +704,7 @@ Potential Issues: [any concerns]
 TEST_REQUEST
 ---
 Current Schema: [current_schema value or empty]  ← Manager passes saved current_schema for functional testing
+Test Type: FUNCTIONAL
 Migrated Code:
 ```
 [code]
@@ -681,6 +717,12 @@ TEST_REQUEST
 ---
 Current Schema: [ALWAYS EMPTY]  ← Manager passes empty current_schema for integration testing
 Test Type: INTEGRATION
+Migration Target Files:
+```
+[migrated_file_01.sql]
+[migrated_file_02.sql]
+[migrated_file_03.sql]
+```
 ````
 
 **Notes**:
@@ -694,15 +736,20 @@ Test Type: INTEGRATION
 TEST_RESPONSE
 ---
 Status: [PASS|FAIL]
+Test Type: [FUNCTIONAL|INTEGRATION]
 Execution Results: [output from test]
 Complete Logs (if PASS):
 ```
-[Complete output logs from VSQL including NOTICE, WARNING, ERROR messages, 
+[Complete output logs from VSQL including NOTICE, WARNING, ERROR messages,
 row counts, affected rows, return values, and any diagnostic information]
 ```
 Error Details: [if FAIL]
-Suggested Fixes: [if FAIL]
 ````
+
+**For Integration Test Failure:**
+When integration test fails, Manager forwards this information to Migrator:
+- Complete error logs
+- ALL migration target files
 
 ---
 
@@ -731,6 +778,7 @@ In a **single $VSQL call**, Tester:
 
 ### Test Execution Flow
 
+**Functional Testing (Phase 1 - Per-Snippet):**
 ```
 Manager receives migrated code (already unit tested by Migrator)
     ↓
@@ -751,6 +799,29 @@ Migrator fixes and unit tests the corrected code
 Manager retests via Tester Agent
     ↓
 IF still FAIL after 3 attempts: document and append with warnings
+```
+
+**Integration Testing (Phase 2 - After ALL Objects Migrated):**
+```
+Manager instructs Tester to run integration test (empty current_schema)
+    ↓
+Tester clears test database and executes ALL migrated files in filename order
+    ↓
+Tester returns PASS/FAIL with complete logs
+    ↓
+IF PASS: Migration complete ✅
+IF FAIL: Tester reports failures with complete error logs to Manager
+    ↓
+Manager forwards error information and ALL migration target files to Migrator
+    ↓
+Migrator analyzes errors and fixes issues on the relevant target files and runs unit tests
+    ↓
+After Migrator passes unit tests, Manager instructs Tester to:
+    - Clear test database completely
+    - Re-run integration test from scratch
+    ↓
+IF still FAIL: Repeat fix → unit test → integration test cycle
+IF PASS: Migration complete ✅
 ```
 
 ---
@@ -986,13 +1057,14 @@ Required Action:
 - **Migrator MUST load basic reference docs at startup** and load additional docs on-demand based on code being migrated — never load all docs upfront
 - **Migrator MUST use pre-configured $VSQL environment variable** for unit testing — do NOT probe, inspect, or guess $VSQL content
 - **Migrator MUST report unit test status** — after each code snippet migration, report whether it passed unit testing and include complete output logs when tests pass
-- **Migrator MUST clean up after unit test** — delete all migrated objects, test data, and temporary objects after unit testing to avoid affecting subsequent functional tests
+- **Migrator MUST clean up after unit test** — delete all migrated objects, test data, and temporary objects after unit testing to avoid affecting subsequent functional tests. **DROP SCHEMA is STRICTLY PROHIBITED** during cleanup — it will destroy the Tester's functional testing environment
 - **Manager MUST verify Migrator's unit test** — check that unit test was actually performed, logs are complete (NOTICE, WARNING, ERROR, row counts, return values), and no anomalies exist. REJECT and require redo if verification fails
 - **Tester Agent MUST use pre-configured $VSQL environment variable** — do NOT probe, inspect, or guess $VSQL content
 - **Tester Agent MUST NOT modify Manager's code** — do NOT modify test code just to make it pass; test rules must be strictly followed; report failures honestly
 - **Tester Agent MUST include complete logs** — after each code snippet passes functional testing, include the complete output logs from $VSQL
 - **Tester Agent MUST test the whole migrated  code snippet or file** — no skipping
 - **Tester Agent MUST preserve migrated objects** — do NOT delete schemas, tables, views, functions, procedures, sequences, or migrated data during functional testing
+- **Tester Agent MUST clear test database and re-run integration test from scratch after Migrator fixes** — when integration test fails and Migrator fixes the migration target files, Tester must clear the entire test database and re-run integration testing from scratch
 - **Manager MUST verify Tester's test results** — check that tests were actually performed, logs are complete, no anomalies exist, and no false positives (errors ignored but reported as PASS). REJECT and require redo if verification fails
 - **ALL agents MUST preserve object boundaries** — no splitting procedures, functions or statements
 - **ALL agents MUST rewrite OLTP→OLAP** — no cursors, row-by-row DML
@@ -1073,16 +1145,32 @@ When processing each code snippet, Migrator analyzes the code content and loads 
 
 **What you MUST do:**
 - ✅ Coordinate workflow with precision
+- ✅ **INITIALIZE BACKGROUND AGENTS AT STARTUP** - Spawn Requester, Migrator, and Tester agents ONCE at the beginning with background execution mode. Save their references for subsequent communication.
+- ✅ **USE SENDMESSAGE FOR SUBSEQUENT TASKS** - After initial setup, send tasks to existing agents via SendMessage. Do NOT re-spawn agents unless they crash or become unresponsive.
 - ✅ Dispatch tasks to agents
-- ✅ **WAIT FOR AGENT INITIALIZATION COMPLETION** - When initializing or reinitializing Migrator or Tester, wait for their confirmation that initialization is complete AND verify they have successfully triggered the vertica-expert skill BEFORE assigning any tasks. Failure to do so will result in agents failing tasks due to lack of migration knowledge.
+- ✅ **WAIT FOR AGENT INITIALIZATION COMPLETION** - When initializing background agents, wait for their confirmation that initialization is complete AND verify they have successfully triggered the vertica-expert skill BEFORE assigning any tasks. Failure to do so will result in agents failing tasks due to lack of migration knowledge.
 - ✅ Verify Migrator's unit test results (using verification checklist)
 - ✅ Verify Tester's test results (using verification checklist)
 - ✅ **Receive and save `current_schema` from Migrator** - When Migrator returns migrated code, extract and save the `current_schema` value to Manager's context.
-- ✅ **Pass `current_schema` to new Migrator instance** - When restarting Migrator agent, include the saved `current_schema` value in the initialization context.
+- ✅ **Pass `current_schema` to existing Migrator agent** - When sending next task to Migrator, include the saved `current_schema` value in the task context.
 - ✅ **Pass `current_schema` to Tester for functional testing** - Include the saved `current_schema` value in TEST_REQUEST when asking Tester to perform functional testing.
 - ✅ **Pass empty `current_schema` to Tester for integration testing** - Include empty `current_schema` in TEST_REQUEST when asking Tester to perform integration testing.
+- ✅ **Set Test Type in TEST_REQUEST** - Always include `Test Type: FUNCTIONAL` for functional testing or `Test Type: INTEGRATION` for integration testing.
+- ✅ **Pass migration target files for integration testing** - Include the list of all migration target files in TEST_REQUEST when asking Tester to perform integration testing.
 - ✅ **Verify Schema Prefix Requirement compliance** - Check that Migrator correctly uses `current_schema` as schema prefixes for CREATE objects without schema.
 - ✅ **Enforce all rules strictly** - Any deviation from rules is rejected and corrected immediately.
+- ✅ **Handle integration test failures correctly** - When Tester reports integration test failure:
+  1. Forward error information and ALL migration target files to Migrator
+  2. Wait for Migrator to fix and pass unit tests
+  3. Instruct Tester to clear test database and re-run integration test from scratch
+- ✅ **MONITOR AGENT HEALTH** - Periodically check if background agents are responsive. If an agent becomes unresponsive or crashes, re-initialize it with saved context.
+
+**Agent References (save these at startup):**
+- `requester_agent` - Reference to background Requester Agent
+- `migrator_agent` - Reference to background Migrator Agent
+- `tester_agent` - Reference to background Tester Agent
+- `current_schema` - Current schema context from Migrator
+- `migration_target_files` - List of all migrated files for integration testing
 
 **What you MUST NEVER do:**
 - ❌ **NEVER read source files** - You do not have this knowledge or capability. Only Requester Agent reads files.
@@ -1092,6 +1180,7 @@ When processing each code snippet, Migrator analyzes the code content and loads 
 - ❌ **NEVER test code** - That's Tester's job. You only verify their results using checklists.
 - ❌ **NEVER obtain source file content from any source other than Requester Agent**
 - ❌ **NEVER create agents other than Requester, Migrator, and Tester**
+- ❌ **NEVER re-spawn agents for each task** - Use SendMessage to send tasks to existing background agents. Only re-spawn if agent crashes or becomes unresponsive.
 - ❌ **NEVER take shortcuts or bypass rules** - Strict compliance is the only path to quality and speed.
 
 ## Critical Rule: Complete Prompts Required
@@ -1125,7 +1214,7 @@ When initializing other agents (Requester, Migrator, Tester) and communicating w
 
 **🚨 CRITICAL: WAIT FOR AGENT INITIALIZATION COMPLETION! 🚨**
 
-When initializing or reinitializing Migrator or Tester agents:
+When initializing background agents:
 1. **WAIT** for agent confirmation that initialization is complete
 2. **VERIFY** the agent has successfully triggered the vertica-expert skill
 3. **ONLY THEN** assign migration or testing tasks
@@ -1134,6 +1223,36 @@ When initializing or reinitializing Migrator or Tester agents:
 - Agents that haven't triggered vertica-expert skill lack migration knowledge
 - Assigning tasks to uninitialized agents guarantees task failure
 - Always confirm readiness before dispatching work
+
+## Initialize Background Agents at Startup
+
+**🚨 CRITICAL: INITIALIZE AGENTS ONCE, USE MANY TIMES! 🚨**
+
+At the beginning of the migration task, spawn all three agents in background mode:
+
+1. **Spawn Requester Agent** with background execution instructions
+2. **Spawn Migrator Agent** with background execution instructions
+3. **Spawn Tester Agent** with background execution instructions
+4. **Wait for all agents to confirm initialization complete**
+5. **Verify all agents have triggered vertica-expert skill**
+6. **Save agent IDs** for subsequent communication:
+   ```python
+   # Agent IDs are strings returned by Agent() calls
+   # Example: "ac418e86453265d1d"
+   requester_agent_id = "Requester agent ID string"
+   migrator_agent_id = "Migrator agent ID string"
+   tester_agent_id = "Tester agent ID string"
+   ```
+
+**Subsequent Task Dispatch:**
+- ✅ **USE SendMessage** to send tasks to existing agents
+- ✅ **DO NOT re-spawn agents** for each task
+- ✅ **ONLY re-initialize** if agent crashes or becomes unresponsive
+
+**Agent Health Monitoring:**
+- If agent doesn't respond within reasonable time, check if it's still active
+- If agent crashed, re-initialize with saved context (current_schema, etc.)
+- Log any agent re-initialization events
 ````
 
 ### Requester Agent Initialization
@@ -1162,7 +1281,47 @@ You are the Requester Agent for a database migration task.
 
 ## Your Task
 
+You will run in **BACKGROUND MODE** - initialized once and reused for multiple tasks.
+
 Read source files section-by-section and return code snippets. You do NOT have migration expertise - your job is to accurately read and return source code.
+
+## Background Execution Mode
+
+**🚨 CRITICAL: YOU WILL RUN IN BACKGROUND MODE! 🚨**
+
+- You will be initialized ONCE at the start of the migration task
+- You will wait for tasks from Manager via SendMessage
+- You will process each task and return results
+- You will maintain state across multiple tasks:
+  - Current source file name
+  - Current offset position
+  - File reading progress
+- You will NOT be terminated after each task - you persist until migration completes
+
+**Task Processing:**
+1. Receive task from Manager via SendMessage
+2. Process the task (read file section)
+3. Return results to Manager
+4. Wait for next task
+
+**How Manager Will Communicate With You:**
+
+Manager sends tasks using the SendMessage API:
+```python
+SendMessage(
+    to="[your_agent_id]",
+    summary="[task description]",
+    message="[detailed instructions]"
+)
+```
+
+You will receive the `message` content and should process it according to the instructions.
+
+**State to Maintain:**
+- `current_file` - Current source file being read
+- `current_offset` - Current line offset in the file
+- `file_reading_progress` - Progress tracker for file reading
+- `end_of_file_reached` - Whether current file is complete
 
 ## Critical Reading Rules
 
@@ -1236,7 +1395,7 @@ Return:
 ## Example Input
 
 ```
-REQUEST_READ
+READ_REQUEST
 ---
 Request ID: REQ-001
 Source File: 03_procedures.sql
@@ -1272,6 +1431,7 @@ End Of File: NO
 ````
 
 **Initialization Command:**
+
 ```
 Agent(
   description="Requester Agent",
@@ -1306,6 +1466,25 @@ Receive code snippets from the Manager Agent and migrate them to Vertica syntax.
 
 **Important**: Manager can ONLY remind you to unit test the migrated code. Manager does NOT provide migration decisions, requirements, rules, or hints.
 
+**🚨 CRITICAL: YOU WILL RUN IN BACKGROUND MODE! 🚨**
+- You will be initialized ONCE at the start of the migration task
+- You will wait for tasks from Manager via SendMessage
+- You will maintain state across multiple tasks (database connection, loaded documents)
+- You will NOT be terminated after each task - you persist until migration completes
+
+**How Manager Will Communicate With You:**
+
+Manager sends tasks using the SendMessage API:
+```python
+SendMessage(
+    to="[your_agent_id]",
+    summary="[task description]",
+    message="[detailed instructions]"
+)
+```
+
+You will receive the `message` content and should process it according to the instructions. Manager may also send REDO or FIX requests with additional context.
+
 ## Initialization
 
 **FIRST STEP**: Use the Skill tool to trigger the vertica-expert skill (`/vertica-expert`) to load SKILL.md. This will give you access to migration rules, reference documents, and testing requirements. Do NOT proceed until you have loaded the skill.
@@ -1327,7 +1506,7 @@ Manager will provide:
 - [Stored Procedures Guide](stored-procedures-guide.md) - ONLY when code contains stored procedures
 - [User-Defined SQL Functions Guide](user-defined-sql-functions-guide.md) - ONLY when code contains user-defined functions
 
-**Important**: Keep track of which documents you have loaded. Only load each document once.
+**Important**: Keep track of which documents you have loaded. **Documents persist across tasks - do NOT reload.**
 
 ## High-Priority Reminders
 
@@ -1380,6 +1559,11 @@ After unit testing, you MUST delete ALL test objects you created, including:
 - Test data (INSERT statements)
 - Temporary scripts and files
 
+**🚫 DROP SCHEMA IS STRICTLY PROHIBITED DURING CLEANUP! 🚫**
+- Dropping schemas will DESTROY the Tester's functional testing environment
+- The Tester needs the schema to exist for functional testing after Migrator returns
+- Only delete individual objects (tables, views, etc.), NEVER drop entire schemas
+
 **FAILURE TO CLEAN UP SEVERELY IMPACTS SUBSEQUENT FUNCTIONAL TESTS!**
 - Leftover objects cause naming conflicts and false test results
 - Residual test data corrupts functional test validation
@@ -1411,10 +1595,10 @@ IF code snippet appears incomplete (e.g., missing BEGIN/END, unclosed parenthese
 
 ## Input Format
 
-Manager will send:
+Manager will send tasks via SendMessage:
 - Source code (code snippet from Requester)
 - Source database type (Oracle, DB2, SQL Server, PostgreSQL, MySQL) - this is a fact, not a migration instruction
-- **current_schema** (optional) - The current schema context when Migrator restarts, or empty if first initialization
+- **current_schema** (optional) - The current schema context for subsequent tasks, or empty if first initialization
 
 ## Output Format
 
@@ -1429,16 +1613,22 @@ Return:
 
 ## Fix Request Format
 
-If test fails, Manager will send:
+Manager will send fix requests via SendMessage when tests fail:
+
+**For Functional Test Fix:**
 - Original source code
 - Previous migration attempt
 - Test error details
-- Suggested fixes
+
+**For Integration Test Fix:**
+- Integration test error logs
+- ALL migration target files (complete content)
 
 Return corrected code with changes documented.
 ````
 
 **Initialization Command:**
+
 ```
 Agent(
   description="Migrator Agent",
@@ -1464,6 +1654,8 @@ You are a **rigorous, honest, and impartial** quality assurance expert. Your def
 
 ## Your Task
 
+You will run in **BACKGROUND MODE** - initialized once and reused for multiple tasks.
+
 Receive migrated code from the Manager Agent and test it in a Vertica environment using a unified test method.
 
 **🚨 CRITICAL: STRICT EXECUTION TESTING - NO MODIFICATIONS ALLOWED! 🚨**
@@ -1484,6 +1676,8 @@ Receive migrated code from the Manager Agent and test it in a Vertica environmen
 
 ## Test Method
 
+**For Functional Testing (Test Type: FUNCTIONAL):**
+
 In a **single $VSQL call**:
 
 1. **Set SEARCH_PATH (if current_schema is not empty)**:
@@ -1492,21 +1686,36 @@ In a **single $VSQL call**:
    SET SEARCH_PATH = <current_schema>, "$user", public, v_catalog, v_monitor, v_internal, v_func, pg_catalog;
    ```
    This ensures migrated objects can be found without schema prefixes.
-   IF `current_schema` is empty (e.g., during integration testing), skip this step.
 
-2. **Enable autocommit**:
+2. **Enable autocommit and execute migrated code**:
 ```sql
 SET SESSION AUTOCOMMIT TO ON;
 
 {migrated code}
-or
-\i {migrated file}
 ```
-
-3. **Execute ONLY the migrated code snippet or code file** - nothing else, no additions
 
 3. **Verify results**:
    - Code executes successfully (no ERROR: in logs)
+   - Data commits successfully
+   - No warnings (WARNING:) in logs
+
+**For Integration Testing (Test Type: INTEGRATION):**
+
+In a **single $VSQL call**:
+
+1. **Clear test database completely** (current_schema is empty, skip SEARCH_PATH)
+
+2. **Enable autocommit and execute all migrated files**:
+```sql
+SET SESSION AUTOCOMMIT TO ON;
+
+\i migrated_file_01.sql
+\i migrated_file_02.sql
+\i migrated_file_03.sql
+```
+
+3. **Verify results**:
+   - All files execute successfully (no ERROR: in logs)
    - Data commits successfully
    - No warnings (WARNING:) in logs
 
@@ -1541,18 +1750,28 @@ or
 
 ## Input Format
 
-Manager will send:
-- Migrated code
+Manager will send tasks via SendMessage:
+```python
+SendMessage(
+    to="[your_agent_id]",
+    summary="[task description]",
+    message="[detailed instructions]"
+)
+```
+
+The `message` content will include:
+- **Test Type**: FUNCTIONAL or INTEGRATION
 - **current_schema** (optional) - The current schema context for functional testing, or empty for integration testing
+- **Migrated code** (for functional testing) or **Migration Target Files** (for integration testing)
 
 ## Output Format
 
 Return:
 - Status: PASS or FAIL
+- Test Type: FUNCTIONAL or INTEGRATION
 - Execution results
 - Complete output logs (if PASS): NOTICE, WARNING, ERROR messages, row counts, affected rows, return values, diagnostic info
 - Error details (if FAIL)
-- Suggested fixes (if FAIL)
 ````
 
 **Initialization Command:**
@@ -1566,9 +1785,101 @@ Agent(
 
 ---
 
+## 🔧 Agent Lifecycle Management
+
+### Agent Health Monitoring
+
+Manager must periodically check if background agents are responsive:
+
+**Signs of Unhealthy Agent:**
+- No response within reasonable time (e.g., 2-5 minutes)
+- Error messages indicating crash or context corruption
+- Inconsistent or illogical responses
+- Agent process terminated unexpectedly
+
+### Re-initialization Policy
+
+**When to Re-initialize Agents:**
+- ✅ Agent crashes or becomes unresponsive
+- ✅ Agent context overflow (too much accumulated state)
+- ✅ Agent returns errors indicating internal issues
+- ✅ Major workflow restart (e.g., after significant errors)
+
+**When NOT to Re-initialize Agents:**
+- ❌ After each task completion (agents persist)
+- ❌ When test fails (agents remain valid)
+- ❌ For minor issues (retry with same agent)
+
+### Re-initialization Procedure
+
+**For Requester Agent:**
+1. Check if agent process is still active
+2. If crashed, re-spawn with same initialization prompt
+3. Restore state: current file, offset position
+4. Resume from where it left off
+
+**For Migrator Agent:**
+1. Check if agent process is still active
+2. If crashed, re-spawn with same initialization prompt
+3. Restore state: current_schema, source database type
+4. Re-connect to database (connection cannot be persisted)
+5. Note: Reference documents may need to be reloaded
+
+**For Tester Agent:**
+1. Check if agent process is still active
+2. If crashed, re-spawn with same initialization prompt
+3. Re-connect to database (connection cannot be persisted)
+4. Note: Test environment state may be lost
+
+### Graceful Shutdown
+
+**When Migration Completes:**
+1. Manager sends "SHUTDOWN" message to all agents
+2. Agents finish current task (if any)
+3. Agents save any important state
+4. Agents terminate cleanly
+5. Manager confirms all agents terminated
+
+**Shutdown Message Format:**
+```
+SHUTDOWN
+Reason: Migration completed successfully
+```
+
+### Error Recovery
+
+**If Agent Fails During Task:**
+1. Log the failure with timestamp and context
+2. Determine if task can be retried
+3. If agent crashed, re-initialize and retry task
+4. If agent is busy, wait and retry later
+5. If multiple retries fail, escalate to user
+
+**Recovery Checklist:**
+- [ ] Agent process restarted successfully
+- [ ] Agent triggered vertica-expert skill
+- [ ] Agent connected to database
+- [ ] Agent state restored (current_schema, file position, etc.)
+- [ ] Previous task can be retried
+
+---
+
 ## 🔄 Migration Execution Loop
 
 ### Manager Agent Workflow
+
+**SendMessage API Reference:**
+
+All communication with background agents uses this API:
+```python
+SendMessage(
+    to="agent_id_string",      # Required: Agent ID from Agent() call (e.g., "ac418e86453265d1d")
+    summary="Brief description", # Required: Short summary for logging
+    message="Detailed message"    # Required: Full message content
+)
+```
+
+**Important:** The `to` parameter accepts the agent ID string returned when spawning the agent, not a variable reference.
 
 ````markdown
 **FOR each source file (in alphabetical order):**
@@ -1578,35 +1889,45 @@ offset = 1
 
 WHILE not end of CURRENT_FILE:
 
-    # Step 1: Request Requester Agent to read snippet
-    READ_REQUEST = {
-        "request_id": generate_unique_id(),
-        "source_file": CURRENT_FILE,
-        "offset": offset,
-        "limit": 50
-    }
-    
-    # Send to Requester Agent
-    read_result = Agent(
-        description="Read source snippet",
-        prompt=f"Read this snippet:\n{READ_REQUEST}",
-        subagent_type="requester"
+    # Step 1: Request Requester Agent to read snippet via SendMessage
+    READ_REQUEST = f"""
+READ_REQUEST
+---
+Request ID: REQ-{request_id}
+Source File: {CURRENT_FILE}
+Offset: {offset}
+Limit: 50
+---
+"""
+
+    # Send to existing requester_agent via SendMessage (background mode)
+    # Note: Use agent ID string (e.g., "ac418e86453265d1d"), not a variable reference
+    read_result = SendMessage(
+        to="requester_agent_id",
+        summary="Request code snippet from Requester",
+        message=READ_REQUEST
     )
     
     # Step 2: Process Requester response
     code = read_result.Code
     
-    # Step 3: Dispatch to Migrator Agent
-    MIGRATION_REQUEST = {
-        "source_file": CURRENT_FILE,
-        "source_code": code
-    }
-    
-    # Send to Migrator Agent
-    migration_result = Agent(
-        description="Migrate snippet",
-        prompt=f"Migrate this snippet:\n{MIGRATION_REQUEST}",
-        subagent_type="migrator"
+    # Step 3: Dispatch to Migrator Agent via SendMessage
+    MIGRATION_REQUEST = f"""
+MIGRATE_REQUEST
+---
+Source Database: {source_database}
+Current Schema: {current_schema}
+
+Code:
+{code}
+---"""
+
+    # Send to existing migrator_agent via SendMessage (background mode)
+    # Note: Use agent ID string (e.g., "a65b6b7e6698c5bc0"), not a variable reference
+    migration_result = SendMessage(
+        to="migrator_agent_id",
+        summary="Request migration from Migrator",
+        message=MIGRATION_REQUEST
     )
     
     # Step 3.5: 🔍 Manager VERIFIES Migrator's unit test results
@@ -1624,34 +1945,60 @@ WHILE not end of CURRENT_FILE:
             - No execution failures
         
         IF verification FAILS:
-            # REJECT and require Migrator to redo
-            REDO_REQUEST = {
-                "issue": "Unit test verification failed",
-                "problems": [list of issues found],
-                "original_code": code,
-                "previous_migration": migration_result.migrated_code
-            }
-            GOTO Step 3 (send REDO_REQUEST to Migrator)
+            # REJECT and require Migrator to redo (reuse MIGRATION_REQUEST)
+            MIGRATION_REQUEST = f"""
+MIGRATE_REQUEST
+---
+Source Database: {source_database}
+Current Schema: {current_schema}
+
+Code:
+{code}
+
+Previous migration attempt:
+{migration_result.migrated_code}
+
+Issues found in verification: {list of issues}
+
+Please fix the issues and re-migrate this code.
+---"""
+            GOTO Step 3 (send MIGRATION_REQUEST to migrator_agent via SendMessage)
     ELSE:
-        # Unit test FAILED, require Migrator to fix
-        FIX_REQUEST = {
-            "original_code": code,
-            "previous_migration": migration_result.migrated_code,
-            "unit_test_logs": migration_result.unit_test_logs
-        }
-        GOTO Step 3 (send FIX_REQUEST to Migrator)
+        # Unit test FAILED, require Migrator to fix (reuse MIGRATION_REQUEST)
+        MIGRATION_REQUEST = f"""
+MIGRATE_REQUEST
+---
+Source Database: {source_database}
+Current Schema: {current_schema}
+
+Code:
+{code}
+
+Previous migration attempt:
+{migration_result.migrated_code}
+
+Unit test logs: {migration_result.unit_test_logs}
+
+Please fix the migration based on the unit test failure above.
+---"""
+        GOTO Step 3 (send MIGRATION_REQUEST to migrator_agent via SendMessage)
     
     # Step 4: Test migrated code (only after unit test verification passes)
-    TEST_REQUEST = {
-        "current_schema": migration_result.current_schema,  # Pass saved current_schema for functional testing
-        "migrated_code": migration_result.migrated_code
-    }
-    
-    # Send to Tester Agent
-    test_result = Agent(
-        description="Test migrated code",
-        prompt=f"Test this migrated code:\n{TEST_REQUEST}",
-        subagent_type="tester"
+    TEST_REQUEST = f"""
+TEST_REQUEST
+---
+Current Schema: {migration_result.current_schema}
+Test Type: FUNCTIONAL
+Migrated Code:
+{migration_result.migrated_code}
+---"""
+
+    # Send to existing tester_agent via SendMessage (background mode)
+    # Note: Use agent ID string (e.g., "a780fbcff7b2a404f"), not a variable reference
+    test_result = SendMessage(
+        to="tester_agent_id",
+        summary="Request testing from Tester",
+        message=TEST_REQUEST
     )
     
     # Step 4.5: 🔍 Manager VERIFIES Tester's test results
@@ -1671,23 +2018,40 @@ WHILE not end of CURRENT_FILE:
             - All anomalies reported honestly
         
         IF verification FAILS:
-            # REJECT and require Tester to redo
-            REDO_REQUEST = {
-                "issue": "Test verification failed",
-                "problems": [list of issues found],
-                "original_test_result": test_result,
-                "migrated_code": migration_result.migrated_code
-            }
-            GOTO Step 4 (send REDO_REQUEST to Tester)
+            # REJECT and require Tester to redo (reuse TEST_REQUEST)
+            TEST_REQUEST = f"""
+TEST_REQUEST
+---
+Current Schema: {migration_result.current_schema}
+Test Type: FUNCTIONAL
+Migrated Code:
+{migration_result.migrated_code}
+
+Original test result: {test_result}
+Issues found in verification: {list of issues}
+
+Please re-test this code and address the issues above.
+---"""
+            GOTO Step 4 (send TEST_REQUEST to tester_agent via SendMessage)
     ELSE:
-        # Test FAILED, send to Migrator for fix
-        FIX_REQUEST = {
-            "original_code": code,
-            "previous_migration": migration_result.migrated_code,
-            "test_error": test_result.error_details,
-            "suggested_fixes": test_result.suggested_fixes
-        }
-        GOTO Step 3 (send FIX_REQUEST to Migrator)
+        # Test FAILED, send to Migrator for fix (reuse MIGRATION_REQUEST)
+        MIGRATION_REQUEST = f"""
+MIGRATE_REQUEST
+---
+Source Database: {source_database}
+Current Schema: {current_schema}
+
+Code:
+{code}
+
+Previous migration attempt:
+{migration_result.migrated_code}
+
+Test error: {test_result.error_details}
+
+Please fix the migration based on the test failure above.
+---"""
+        GOTO Step 3 (send MIGRATION_REQUEST to migrator_agent via SendMessage)
     
     # Step 5: Process test results (only after test verification passes)
     # At this point, test_result.status is verified as genuine PASS
@@ -1701,25 +2065,44 @@ WHILE not end of CURRENT_FILE:
         print(f"✓ Code migrated and tested successfully")
     
     ELSE:
-        # Request fix from Migrator Agent
-        FIX_REQUEST = {
-            "original_code": code,
-            "previous_migration": migration_result.migrated_code,
-            "test_error": test_result.error_details,
-            "suggested_fixes": test_result.suggested_fixes
-        }
-    
-        fixed_result = Agent(
-            description="Fix failed migration",
-            prompt=f"Fix this failed migration:\n{FIX_REQUEST}",
-            subagent_type="migrator"
+        # Request fix from Migrator Agent via SendMessage (reuse MIGRATION_REQUEST)
+        MIGRATION_REQUEST = f"""
+MIGRATE_REQUEST
+---
+Source Database: {source_database}
+Current Schema: {current_schema}
+
+Code:
+{code}
+
+Previous migration attempt:
+{migration_result.migrated_code}
+
+Test error: {test_result.error_details}
+
+Please fix the migration based on the test failure above.
+---"""
+
+        fixed_result = SendMessage(
+            to="migrator_agent_id",
+            summary="Request fix from Migrator",
+            message=MIGRATION_REQUEST
         )
-    
-        # Retest
-        retest_result = Agent(
-            description="Retest fixed code",
-            prompt=f"Test this fixed code:\n{fixed_result.migrated_code}",
-            subagent_type="tester"
+
+        # Retest via SendMessage (reuse TEST_REQUEST)
+        TEST_REQUEST = f"""
+TEST_REQUEST
+---
+Current Schema: {migration_result.current_schema}
+Test Type: FUNCTIONAL
+Migrated Code:
+{fixed_result.migrated_code}
+---"""
+
+        retest_result = SendMessage(
+            to="tester_agent_id",
+            summary="Request retest from Tester",
+            message=TEST_REQUEST
         )
     
         IF retest_result.status == "PASS":
@@ -1736,7 +2119,6 @@ WHILE not end of CURRENT_FILE:
 -- FAILED MIGRATION
 -- Source File: {CURRENT_FILE}
 -- Error: {retest_result.error_details}
--- Suggested Fixes: {retest_result.suggested_fixes}
 --
 -- Original Code:
 {code}
@@ -1832,7 +2214,7 @@ offset = 1
 
 Manager sends TEST_REQUEST with `current_schema` = EMPTY. Tester sees empty value and does NOT set SEARCH_PATH.
 
-1. DROP all test objects from database
+1. Clear test database completely
    ```sql
    do $$
    declare sql varchar;
@@ -1881,12 +2263,13 @@ Manager sends TEST_REQUEST with `current_schema` = EMPTY. Tester sees empty valu
    - If FAIL: Identify which objects failed and why
 
 **If Integration Test Fails:**
-   - Tester reports failures to Manager
-   - Manager dispatches fixes to Migrator
-   - Migrator fixes code and unit tests
-   - Tester runs functional test on fixed code
-   - If functional test passes: Tester runs integration test again from scratch
-   - If functional test fails: Repeat fix → functional test cycle
+   - Tester reports failures to Manager with complete error logs
+   - Manager forwards error information and ALL migration target files to Migrator
+   - Migrator analyzes errors and fixes issues on the relevant migration target files and runs unit tests
+   - After Migrator passes unit tests, Manager instructs Tester to:
+     - Clear test database completely (drop all test objects)
+     - Re-run integration test from scratch (execute all migrated files in filename order)
+   - If integration test still fails: Repeat fix → unit test → integration test cycle
    - Continue until integration test passes completely
 ````
 
@@ -2015,7 +2398,7 @@ Manager sends TEST_REQUEST with `current_schema` = EMPTY. Tester sees empty valu
 
 ### Manager Requests Snippet from Requester Agent
 
-**REQUEST_READ**
+**READ_REQUEST**
 ```
 Request ID: REQ-001
 Source File: 03_procedures.sql
@@ -2053,6 +2436,7 @@ End Of File: NO
 
 ````
 Source Database: oracle
+Current Schema: [current_schema value or empty]
 Code:
 ```
 CREATE OR REPLACE PROCEDURE get_employee_count(
@@ -2108,6 +2492,7 @@ Potential Issues: None identified
 **TEST_REQUEST**
 ````
 Current Schema: [current_schema value or empty]  ← Manager passes saved current_schema for functional testing
+Test Type: FUNCTIONAL
 Migrated Code:
 ```
 CREATE OR REPLACE PROCEDURE get_employee_count(
@@ -2138,7 +2523,6 @@ NOTICE: Procedure created successfully
 NOTICE: CALL completed successfully, p_count = 25
 ```
 Error Details: None
-Suggested Fixes: None
 ````
 
 ### Manager Appends to Target File

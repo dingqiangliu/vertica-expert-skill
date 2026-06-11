@@ -359,100 +359,127 @@ add_background(slide, WHITE)
 add_title_bar(slide, "Multi-Agent Migration Workflow", "Professional agents of a team collaborating on large-scale migration")
 
 # Manager Agent at center
-manager_card = add_shape(slide, Inches(5.5), Inches(4.5), Inches(2.4), Inches(1.6), SOFT_BLUE, border_color=DARK_BLUE, border_width=Pt(2.5))
-add_text_box(slide, Inches(5.5), Inches(4.55), Inches(2.4), Inches(0.3),
-             "Manager Agent", font_size=12, color=DARK_BLUE, bold=True, alignment=PP_ALIGN.CENTER)
+manager_card = add_shape(slide, Inches(5.7), Inches(3.7), Inches(2.0), Inches(1.14), SOFT_BLUE, border_color=DARK_BLUE, border_width=Pt(2))
+add_text_box(slide, Inches(5.7), Inches(3.75), Inches(2.0), Inches(0.22),
+             "Manager Agent", font_size=10, color=DARK_BLUE, bold=True, alignment=PP_ALIGN.CENTER)
 manager_desc = [
     "Controls workflow",
     "Dispatches tasks",
     "Coordinates testing",
     "Appends to target"
 ]
-add_text_box(slide, Inches(5.6), Inches(4.9), Inches(2.2), Inches(1.12),
-             '\n'.join([f"• {desc}" for desc in manager_desc]), font_size=10, color=DARK_TEXT)
+add_text_box(slide, Inches(5.8), Inches(4.02), Inches(1.8), Inches(0.79),
+             '\n'.join([f"• {desc}" for desc in manager_desc]), font_size=8, color=DARK_TEXT)
 
 # Requester Agent (top-left)
-requester_card = add_shape(slide, Inches(5.5), Inches(1.3), Inches(2.4), Inches(1.6), SOFT_PURPLE, border_color=PURPLE, border_width=Pt(2))
-add_text_box(slide, Inches(5.5), Inches(1.35), Inches(2.4), Inches(0.3),
-             "Requester Agent", font_size=12, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+requester_card = add_shape(slide, Inches(5.7), Inches(1.5), Inches(2.0), Inches(1.14), SOFT_PURPLE, border_color=PURPLE, border_width=Pt(1.5))
+add_text_box(slide, Inches(5.7), Inches(1.55), Inches(2.0), Inches(0.22),
+             "Requester Agent", font_size=10, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
 requester_desc = [
     "Reads files section-by-section",
     "Uses Read(offset, limit)",
     "Identifies objects",
     "Maintains reading state"
 ]
-add_text_box(slide, Inches(5.6), Inches(1.7), Inches(2.2), Inches(1.12),
-             '\n'.join([f"• {desc}" for desc in requester_desc]), font_size=10, color=DARK_TEXT)
+add_text_box(slide, Inches(5.8), Inches(1.82), Inches(1.8), Inches(0.79),
+             '\n'.join([f"• {desc}" for desc in requester_desc]), font_size=8, color=DARK_TEXT)
 
 # Migrator Agent (bottom-left)
-migrator_card = add_shape(slide, Inches(0.5), Inches(4.5), Inches(2.4), Inches(1.6), SOFT_ORANGE, border_color=ORANGE, border_width=Pt(2))
-add_text_box(slide, Inches(0.5), Inches(4.55), Inches(2.4), Inches(0.3),
-             "Migrator Agent", font_size=12, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+migrator_card = add_shape(slide, Inches(1.0), Inches(3.7), Inches(2.0), Inches(1.14), SOFT_ORANGE, border_color=ORANGE, border_width=Pt(1.5))
+add_text_box(slide, Inches(1.0), Inches(3.75), Inches(2.0), Inches(0.22),
+             "Migrator Agent", font_size=10, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
 migrator_desc = [
     "Code transformation",
     "Loads docs on-demand",
     "Unit tests code",
     "Returns verified code"
 ]
-add_text_box(slide, Inches(0.6), Inches(4.9), Inches(2.2), Inches(1.12),
-             '\n'.join([f"• {desc}" for desc in migrator_desc]), font_size=10, color=DARK_TEXT)
+add_text_box(slide, Inches(1.1), Inches(4.02), Inches(1.8), Inches(0.79),
+             '\n'.join([f"• {desc}" for desc in migrator_desc]), font_size=8, color=DARK_TEXT)
 
 # Tester Agent (right)
-tester_card = add_shape(slide, Inches(10.4), Inches(4.5), Inches(2.4), Inches(1.6), SOFT_GREEN, border_color=GREEN, border_width=Pt(2))
-add_text_box(slide, Inches(10.4), Inches(4.55), Inches(2.4), Inches(0.3),
-             "Tester Agent", font_size=12, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
-tester_desc = [
-    "Functional testing",
-    "Integration testing",
-    "Complete logs check",
-    "Pass/fail feedback"
-]
-add_text_box(slide, Inches(10.5), Inches(4.9), Inches(2.2), Inches(1.22),
-             '\n'.join([f"• {desc}" for desc in tester_desc]), font_size=10, color=DARK_TEXT)
+tester_card = add_shape(slide, Inches(10.4), Inches(3.7), Inches(2.0), Inches(1.14), SOFT_GREEN, border_color=GREEN, border_width=Pt(1.5))
+add_text_box(slide, Inches(10.4), Inches(3.75), Inches(2.0), Inches(0.22),
+             "Tester Agent", font_size=10, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(10.5), Inches(4.02), Inches(1.8), Inches(0.2),
+             "• Functional testing", font_size=8, color=ORANGE)
+add_text_box(slide, Inches(10.5), Inches(4.22), Inches(1.8), Inches(0.2),
+             "• Integration testing", font_size=8, color=GREEN)
+add_text_box(slide, Inches(10.5), Inches(4.42), Inches(1.8), Inches(0.2),
+             "• Complete logs check", font_size=8, color=DARK_TEXT)
+add_text_box(slide, Inches(10.5), Inches(4.62), Inches(1.8), Inches(0.2),
+             "• Pass/fail feedback", font_size=8, color=DARK_TEXT)
+
+# Phase 1: Read & Migrate - large box enclosing all 4 agents (dashed orange border, no fill)
+phase1_box = add_shape(slide, Inches(0.4), Inches(1.35), Inches(12.5), Inches(4.6), WHITE, border_color=ORANGE, border_width=Pt(1.5))
+phase1_box.line.dash_style = 2  # Dash style
+phase1_box.fill.background()  # No fill - transparent
+add_text_box(slide, Inches(0.9), Inches(1.38), Inches(2.5), Inches(0.22),
+             "Phase 1: Read & Migrate", font_size=8, color=ORANGE, bold=True, alignment=PP_ALIGN.LEFT)
+
+# Phase 2: Test & Validate - box enclosing Manager, Migrator, Tester (dashed green border, no fill)
+phase2_box = add_shape(slide, Inches(0.8), Inches(3.46), Inches(11.8), Inches(2.01), WHITE, border_color=GREEN, border_width=Pt(1.5))
+phase2_box.line.dash_style = 2  # Dash style
+phase2_box.fill.background()  # No fill - transparent
+add_text_box(slide, Inches(0.9), Inches(3.49), Inches(2.5), Inches(0.22),
+             "Phase 2: Test & Validate", font_size=8, color=GREEN, bold=True, alignment=PP_ALIGN.LEFT)
 
 # Arrows between Manager and other agents
 
+# === Requester ↔ Manager (Purple arrows) ===
+
 # Requester → Manager (REQUEST_READ - arrow pointing down)
-arrow_req_mgr = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.7), Inches(3.2), Inches(0.3), Inches(1.0))
+arrow_req_mgr = slide.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.7), Inches(2.94), Inches(0.22), Inches(0.7))
 arrow_req_mgr.fill.solid()
 arrow_req_mgr.fill.fore_color.rgb = PURPLE
 arrow_req_mgr.line.fill.background()
-add_text_box(slide, Inches(6.8), Inches(3.65), Inches(1.7), Inches(0.2), "REQUEST_READ", font_size=6.5, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(6.8), Inches(3.25), Inches(1.4), Inches(0.16), "REQUEST_READ", font_size=6, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
 
 # Manager → Requester (READ_RESPONSE - arrow pointing up)
-arrow_mgr_req = slide.shapes.add_shape(MSO_SHAPE.UP_ARROW, Inches(6.3), Inches(3.2), Inches(0.3), Inches(1.0))
+arrow_mgr_req = slide.shapes.add_shape(MSO_SHAPE.UP_ARROW, Inches(6.4), Inches(2.94), Inches(0.22), Inches(0.7))
 arrow_mgr_req.fill.solid()
 arrow_mgr_req.fill.fore_color.rgb = PURPLE
 arrow_mgr_req.line.fill.background()
-add_text_box(slide, Inches(4.8), Inches(3.65), Inches(1.7), Inches(0.2), "READ_RESPONSE", font_size=6.5, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(5.0), Inches(3.25), Inches(1.4), Inches(0.16), "READ_RESPONSE", font_size=6, color=PURPLE, bold=True, alignment=PP_ALIGN.CENTER)
+
+# === Migrator ↔ Manager (Orange arrows) ===
 
 # Migrator → Manager (MIGRATE_REQUEST - arrow pointing right)
-arrow_mig_mgr = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(3.1), Inches(5.1), Inches(2.3), Inches(0.3))
+arrow_mig_mgr = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(3.2), Inches(4.2), Inches(2.0), Inches(0.22))
 arrow_mig_mgr.fill.solid()
 arrow_mig_mgr.fill.fore_color.rgb = ORANGE
 arrow_mig_mgr.line.fill.background()
-add_text_box(slide, Inches(3.3), Inches(4.85), Inches(1.7), Inches(0.2), "MIGRATE_REQUEST", font_size=6.5, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(3.4), Inches(4.02), Inches(1.4), Inches(0.16), "MIGRATE_REQUEST", font_size=6, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
 
 # Manager → Migrator (MIGRATE_RESPONSE - arrow pointing left)
-arrow_mgr_mig = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(3.1), Inches(5.5), Inches(2.3), Inches(0.3))
+arrow_mgr_mig = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(3.2), Inches(4.58), Inches(2.0), Inches(0.22))
 arrow_mgr_mig.fill.solid()
 arrow_mgr_mig.fill.fore_color.rgb = ORANGE
 arrow_mgr_mig.line.fill.background()
-add_text_box(slide, Inches(3.3), Inches(5.85), Inches(1.7), Inches(0.2), "MIGRATE_RESPONSE", font_size=6.5, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(3.4), Inches(4.82), Inches(1.4), Inches(0.16), "MIGRATE_RESPONSE", font_size=6, color=ORANGE, bold=True, alignment=PP_ALIGN.CENTER)
+
+# === Tester ↔ Manager (Green arrows) ===
 
 # Manager → Tester (TEST_REQUEST - arrow pointing right)
-arrow_mgr_tst = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(8.0), Inches(5.0), Inches(2.3), Inches(0.3))
+arrow_mgr_tst = slide.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(7.9), Inches(4.2), Inches(2.0), Inches(0.22))
 arrow_mgr_tst.fill.solid()
 arrow_mgr_tst.fill.fore_color.rgb = GREEN
 arrow_mgr_tst.line.fill.background()
-add_text_box(slide, Inches(8.5), Inches(4.85), Inches(1.7), Inches(0.2), "TEST_REQUEST", font_size=6.5, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(8.3), Inches(4.02), Inches(1.4), Inches(0.16), "TEST_REQUEST", font_size=6, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
 
 # Tester → Manager (TEST_RESPONSE - arrow pointing left)
-arrow_tst_mgr = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(8.0), Inches(5.5), Inches(2.3), Inches(0.3))
+arrow_tst_mgr = slide.shapes.add_shape(MSO_SHAPE.LEFT_ARROW, Inches(7.9), Inches(4.58), Inches(2.0), Inches(0.22))
 arrow_tst_mgr.fill.solid()
 arrow_tst_mgr.fill.fore_color.rgb = GREEN
 arrow_tst_mgr.line.fill.background()
-add_text_box(slide, Inches(8.5), Inches(5.85), Inches(1.7), Inches(0.2), "TEST_RESPONSE", font_size=6.5, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+add_text_box(slide, Inches(8.3), Inches(4.82), Inches(1.4), Inches(0.16), "TEST_RESPONSE", font_size=6, color=GREEN, bold=True, alignment=PP_ALIGN.CENTER)
+
+# === Iteration Loop: Test Fail → Re-migrate ===
+
+# Iteration loop box (bottom-right)
+iteration_box = add_shape(slide, Inches(10.4), Inches(5.38), Inches(2.0), Inches(0.35), SOFT_RED, border_color=RED, border_width=Pt(1))
+add_text_box(slide, Inches(10.4), Inches(5.4), Inches(2.0), Inches(0.3),
+             "Test Fail → Fix bugs → Retest", font_size=7, color=RED, bold=True, alignment=PP_ALIGN.CENTER)
 
 # Benefits section
 benefits_box = add_shape(slide, Inches(0.5), Inches(6.3), Inches(12.3), Inches(0.6), LIGHT_GRAY, border_color=DARK_BLUE, border_width=Pt(1))

@@ -7,8 +7,8 @@
 # This script uninstalls the Vertica Expert skill from Claude Code.
 # It removes all installed files and cleans up the installation directory.
 #
-# Usage: ./uninstall.sh [install_path]
-#   install_path: Optional. Custom installation directory (default: ~/.claude/plugins)
+# Usage: ./uninstall.sh [claude_path]
+#   claude_path: Optional. Custom Claude installation directory (default: ~/.claude)
 
 set -e
 
@@ -24,17 +24,20 @@ echo "==========================================================================
 
 # Determine installation path
 if [ -z "$1" ]; then
-    INSTALL_PATH="$HOME/.claude/skills"
+    CLAUDE_PATH="$HOME/.claude"
 else
-    INSTALL_PATH="$1"
+    CLAUDE_PATH="$1"
 fi
 
 SKILL_NAME="vertica-expert"
-SKILL_PATH="$INSTALL_PATH/$SKILL_NAME"
+SKILL_INSTALL_PATH="$CLAUDE_PATH/skills/$SKILL_NAME"
+
+# Agent installation path
+AGENT_INSTALL_PATH="$CLAUDE_PATH/agents/$SKILL_NAME"
 
 # Check if skill is installed
-if [ ! -d "$SKILL_PATH" ]; then
-    echo -e "${YELLOW}⚠ Skill not found at: $SKILL_PATH${NC}"
+if [ ! -d "$SKILL_INSTALL_PATH" ]; then
+    echo -e "${YELLOW}⚠ Skill not found at: $SKILL_INSTALL_PATH${NC}"
     echo "Checking common installation locations..."
 
     # Check if running from within the skill directory
@@ -50,11 +53,23 @@ if [ ! -d "$SKILL_PATH" ]; then
     exit 1
 fi
 
-echo -e "📁 Found installed skill at: ${YELLOW}$SKILL_PATH${NC}"
+echo -e "📁 Found installed skill at: ${YELLOW}$SKILL_INSTALL_PATH${NC}"
+
+# Check if agents are installed
+AGENTS_INSTALLED=false
+if [ -d "$AGENT_INSTALL_PATH" ]; then
+    AGENTS_INSTALLED=true
+    echo -e "🤖 Found installed agents at: ${YELLOW}$AGENT_INSTALL_PATH${NC}"
+fi
 
 # Show what will be removed
 echo -e "\n📋 Files to be removed:"
-ls -la "$SKILL_PATH/" 2>/dev/null | head -10 || echo "   (Unable to list files)"
+ls -la "$SKILL_INSTALL_PATH/" 2>/dev/null | head -10 || echo "   (Unable to list files)"
+
+if [ "$AGENTS_INSTALLED" = true ]; then
+    echo -e "\n🤖 Agent files to be removed:"
+    ls -la "$AGENT_INSTALL_PATH/" 2>/dev/null | head -10 || echo "   (Unable to list agent files)"
+fi
 
 # Confirm uninstallation
 read -p "\nAre you sure you want to uninstall the Vertica Expert skill? (y/N) " -n 1 -r
@@ -72,24 +87,41 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     mkdir -p "$BACKUP_DIR"
     BACKUP_NAME="vertica-expert-$(date +%Y%m%d-%H%M%S)"
     echo -e "📦 Creating backup: ${YELLOW}$BACKUP_DIR/$BACKUP_NAME${NC}"
-    cp -r "$SKILL_PATH" "$BACKUP_DIR/$BACKUP_NAME"
+    cp -r "$SKILL_INSTALL_PATH" "$BACKUP_DIR/$BACKUP_NAME"
+    if [ "$AGENTS_INSTALLED" = true ]; then
+        cp -r "$AGENT_INSTALL_PATH" "$BACKUP_DIR/$BACKUP_NAME/agents"
+    fi
     echo -e "${GREEN}✓ Backup created${NC}"
 fi
 
 # Remove the skill directory
 echo -e "\n🗑️  Removing skill files..."
-rm -rf "$SKILL_PATH"
+rm -rf "$SKILL_INSTALL_PATH"
 
 # Verify removal
-if [ ! -d "$SKILL_PATH" ]; then
+if [ ! -d "$SKILL_INSTALL_PATH" ]; then
     echo -e "${GREEN}✅ Skill successfully uninstalled${NC}"
 else
     echo -e "${RED}❌ Failed to remove skill directory${NC}"
     exit 1
 fi
 
+# Remove agent files if they exist
+if [ "$AGENTS_INSTALLED" = true ]; then
+    echo -e "\n🗑️  Removing agent files..."
+    rm -rf "$AGENT_INSTALL_PATH"
+
+    # Verify agent removal
+    if [ ! -d "$AGENT_INSTALL_PATH" ]; then
+        echo -e "${GREEN}✅ Agent files successfully uninstalled${NC}"
+    else
+        echo -e "${RED}❌ Failed to remove agent directory${NC}"
+        exit 1
+    fi
+fi
+
 # Clean up empty parent directory if it's empty
-PARENT_DIR="$INSTALL_PATH"
+PARENT_DIR="$CLAUDE_PATH/skills"
 if [ -d "$PARENT_DIR" ] && [ -z "$(ls -A "$PARENT_DIR" 2>/dev/null)" ]; then
     echo -e "🧹 Cleaning up empty parent directory..."
     rmdir "$PARENT_DIR"
@@ -100,7 +132,10 @@ echo "==========================================================================
 echo "The Vertica Expert skill has been successfully removed."
 echo ""
 echo "📝 Summary:"
-echo "   • Skill files removed from: $SKILL_PATH"
+echo "   • Skill files removed from: $SKILL_INSTALL_PATH"
+if [ "$AGENTS_INSTALLED" = true ]; then
+    echo "   • Agent files removed from: $AGENT_INSTALL_PATH"
+fi
 if [[ "$BACKUP_NAME" ]]; then
     echo "   • Backup created at: $BACKUP_DIR/$BACKUP_NAME"
 fi

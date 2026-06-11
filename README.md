@@ -296,7 +296,8 @@ Then monitor and frequently remind the Manager:
 1. Never tell Migrator how to migrate, he is the expert of migration, not you.
 2. Never tell Tester how to test, he is the expert of testing, not you.
 3. Don't disclose the source and target files to anyone.
-4. Use SendMessage for all subsequent tasks. If you lose the IDs of the subagents, just look for them it in the place where Claude stores subagent information.
+4. Don't forget your context management duty, include sending SendMessage CONTEXT_REFRESH to subagents.
+5. Use SendMessage for all subsequent tasks. If you lose the IDs of the subagents, just look for them it in the place where Claude stores subagent information.
 ```
 
 **Reference Documentation:**

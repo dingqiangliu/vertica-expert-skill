@@ -213,6 +213,29 @@ Or in Chinese if you prefer:
 
 ### 🤖 Multi-Agent Migration Workflow
 
+**⚠️ PREREQUISITE: Enable Background Agent Support**
+
+Before using this workflow, you may need set the environment variable `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` to enable background agent execution and SendMessage communication for better experience:
+
+**Option 1: Set in `~/.claude/settings.json`** (Recommended)
+```json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
+```
+
+**Option 2: Set in profile before start claude**
+
+```bash
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
+```
+
+📖 **Documentation:** For more details on background agent execution and SendMessage API, see [Claude Code Sub-Agents Documentation](https://code.claude.com/docs/en/sub-agents#resume-subagents)
+
+---
+
 **When to Use:** Multiple source files, or single file >200 lines, or multiple stored procedures/functions, or large-scale migrations requiring strict context management
 
 **When NOT to Use:** Single small file, simple table structure migration
@@ -221,27 +244,27 @@ Or in Chinese if you prefer:
 
 | Agent | Role | Key Constraint |
 |-------|------|----------------|
-| **Manager** (main session) | Coordinates workflow, **strictly verifies** Migrator/Tester results, appends to target | 🚫 **NEVER reads source files or migration references** — only reads [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) |
-| **Requester** (sub-agent) | Reads source files section-by-section using `Read(offset=N, limit=50)`, identifies complete objects | 🚫 **EXCLUSIVE file reader** — no migration knowledge, returns code as-is |
-| **Migrator** (sub-agent) | Performs code transformation, unit tests before returning | 🚫 **ONLY agent** that loads migration reference documents |
-| **Tester** (sub-agent) | Validates migrated code in single VSQL call with autocommit | 🚫 **ONLY reads** [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) |
+| **Manager** (main session) | **INITIALIZES BACKGROUND AGENTS AT STARTUP**, coordinates workflow, **strictly verifies** Migrator/Tester results, appends to target, **communicates via SendMessage** | 🚫 **NEVER reads source files or migration references** — only reads [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md), **NEVER re-spawns agents for each task** |
+| **Requester** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Reads source files section-by-section using `Read(offset=N, limit=50)`, identifies complete objects | 🚫 **EXCLUSIVE file reader** — no migration knowledge, returns code as-is |
+| **Migrator** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Performs code transformation, unit tests before returning | 🚫 **ONLY agent** that loads migration reference documents |
+| **Tester** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Validates migrated code in single VSQL call with autocommit | 🚫 **ONLY reads** [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) |
 
 **Workflow Loop:**
 
 ```
 Phase 1: Migration & Functional Testing (per source file, alphabetical order)
-  REQUEST → Requester READS section (offset=N, limit=50) → RETURNS code snippet
-  → DISPATCH to Migrator → MIGRATES + unit tests (up to 10 attempts)
+  Manager SENDMESSAGE to requester_agent → Requester READS section (offset=N, limit=50) → RETURNS code snippet
+  → Manager SENDMESSAGE to migrator_agent → MIGRATES + unit tests (up to 10 attempts)
   → 🔍 MANAGER VERIFIES unit test (logs complete, no anomalies, status PASSED)
-  → FUNCTIONAL TEST via Tester (single VSQL call, autocommit, verify no errors)
+  → Manager SENDMESSAGE to tester_agent → FUNCTIONAL TEST (single VSQL call, autocommit, verify no errors)
   → 🔍 MANAGER VERIFIES test results (logs complete, no false positives)
   → PASS → APPEND to target file
-  → FAIL → REQUEST fix from Migrator → RETEST
+  → FAIL → Manager SENDMESSAGE to migrator_agent to fix → RETEST
 
 Phase 2: Integration Testing (after ALL objects migrated)
-  Tester clears test database completely → executes ALL files in order → runs integration test
+  Manager SENDMESSAGE to tester_agent: clears test database completely → executes ALL files in order → runs integration test
   → PASS → ✅ Migration complete
-  → FAIL → Tester reports failures with complete logs → Manager forwards error info and ALL target files to Migrator → Migrator analyzes errors and fixes issues on relevant target files and runs unit tests → Tester clears test database and re-runs integration test from scratch → Repeat until pass
+  → FAIL → Tester reports failures with complete logs → Manager SENDMESSAGE to migrator_agent with error info and ALL target files → Migrator analyzes errors and fixes issues → Manager SENDMESSAGE to tester_agent to clear test database and re-run integration test → Repeat until pass
 ```
 
 **Manager's Strict Limits:**
@@ -249,8 +272,9 @@ Phase 2: Integration Testing (after ALL objects migrated)
 - ✅ **ONLY creates Requester, Migrator, Tester agents** — no other agents allowed
 - ✅ **ONLY provides process control** — NEVER gives migration rules/decisions to Migrator
 - ✅ **VERIFICATION, not migration expertise** — verifies test logs, not code correctness
+- ✅ **ONLY re-initializes agents if they crash** — uses SendMessage for all subsequent tasks
 
-**Benefits:** Focused context windows · Clear separation of concerns · Dual verification ensures quality · Two-phase testing · Easy debugging
+**Benefits:** Focused context windows · Clear separation of concerns · Dual verification ensures quality · Two-phase testing · Easy debugging · **Agents persist across tasks — no repeated initialization overhead**
 
 **Quick Start:**
 ```prompt
@@ -264,6 +288,16 @@ Example:
 Task: Please use the Multi-Agent Migration Workflow to migrate SQL Server database scripts from "examples/sqlserver/*.sql" to Vertica, saving results to "examples/vertica/" with identical file names.
 
 You are the Manager agent. Before starting, wait for my confirmation.
+```
+
+Then monitor and frequently remind the Manager:
+```prompt
+/loop 5m You are the Manager agent. Remember:
+1. Never tell Migrator how to migrate, he is the expert of migration, not you.
+2. Never tell Tester how to test, he is the expert of testing, not you.
+3. Don't disclose the source and target files to anyone.
+4. Don't forget your context management duty, include sending SendMessage CONTEXT_REFRESH to subagents.
+5. Use SendMessage for all subsequent tasks. If you lose the IDs of the subagents, just look for them it in the place where Claude stores subagent information.
 ```
 
 **Reference Documentation:**

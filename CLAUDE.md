@@ -65,7 +65,7 @@ Claude should:
 
 ## Key Reference Files
 
-### 1. Generic Migration Guide (`references/generic-migration-guide.md`) 🚨 **MANDATORY READING**
+### 1. Generic Migration Guide 🚨 **MANDATORY READING**
 **USE FOR ALL DATABASE MIGRATIONS** - This is the master reference that defines non-negotiable requirements:
 - **Complete Migration Requirements**: ALL objects must be migrated (no selective migration)
 - **Sequential Processing**: Process source files in exact order (no skipping or reordering)
@@ -75,7 +75,10 @@ Claude should:
 - **No Automation**: Never use scripts or bulk processing
 - **Reference Priority**: This guide takes precedence over all other migration guides
 
-### 1.5. OLTP to OLAP Rewrite Guide (`references/oltp-to-olap-rewrite-guide.md`) 🔄 **ESSENTIAL FOR PROCEDURAL CODE**
+**Full Document:** [Generic Migration Guide](references/generic-migration-guide.md)
+**Summary (for reduced context):** [Generic Migration Summary](references/reference-summaries/generic-migration-summary.md)
+
+### 2. OLTP to OLAP Rewrite Guide 🔄 **ESSENTIAL FOR PROCEDURAL CODE**
 **USE WHENEVER MIGRATING PROCEDURAL/OLTP CODE** - This guide covers the architectural paradigm shift from row-by-row to set-based processing:
 - **5 Rewrite Patterns**: Adjacent DML merging, loop-DML→set-based SQL, cursor→window functions, function-call→join, recursive CTE, etc.
 - **Before/After Examples**: Each scenario shows the anti-pattern and the optimized Vertica rewrite
@@ -83,24 +86,34 @@ Claude should:
 - **Decision Framework**: Flowchart for choosing the right rewrite approach
 - **Anti-Pattern Rejection List**: Patterns that should always be flagged and rewritten
 
-### 2. Migration Guides Overview (`references/migration-guides-overview.md`)
+**Full Document:** [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)
+**Summary (for reduced context):** [OLTP to OLAP Summary](references/reference-summaries/oltp-to-olap-summary.md)
+
+### 3. Migration Guides Overview
 Shows the hierarchical relationship between all migration guides and provides usage instructions for each database type.
 
-### 3. Data Types (`references/data-types.md`)
+**Document:** [Migration Guides Overview](references/migration-guides-overview.md)
+
+### 4. Data Types
 Use when converting table schemas. Contains:
 - Complete data type mapping between source databases and Vertica
 - Optimization strategies for storage and performance
 - Complex types (ARRAY, ROW, SET, spatial)
 - Migration examples for each database system
 
-### 4. Function Mapping (`references/function-mapping.md`)
+**Full Document:** [Data Types](references/data-types.md)
+**Summary (for reduced context):** [Data Types Summary](references/reference-summaries/data-types-summary.md)
+
+### 5. Function Mapping
 Use when users need to convert specific functions. Contains:
 - 100+ function mappings from Oracle, DB2, SQL Server, PostgreSQL, MySQL
 - Aggregate functions (including approximate variants)
 - String, date, mathematical, and analytic functions
 - Type conversion functions and optimization guidelines
 
-### 5. User-Defined SQL Functions (`references/user-defined-sql-functions-guide.md`)
+**Full Document:** [Function Mapping](references/function-mapping.md)
+
+### 6. User-Defined SQL Functions
 Use when creating or managing User-Defined SQL Functions. Contains comprehensive coverage of:
 - **Quick Start**: Basic examples and syntax
 - **Complete Reference**: CREATE FUNCTION syntax with all parameters
@@ -110,7 +123,10 @@ Use when creating or managing User-Defined SQL Functions. Contains comprehensive
 - **Best Practices**: Naming conventions, error handling, documentation
 - **Troubleshooting**: Common issues and debugging tips
 
-### 6. Stored Procedures (`references/stored-procedures-guide.md`)
+**Full Document:** [User-Defined SQL Functions](references/user-defined-sql-functions-guide.md)
+**Summary (for reduced context):** [User-Defined SQL Functions Summary](references/reference-summaries/user-defined-sql-functions-summary.md)
+
+### 7. Stored Procedures
 Use when creating or managing stored procedures in PL/vSQL. Contains:
 - **PL/vSQL Fundamentals**: Syntax, variables, control structures
 - **Parameter Modes**: IN, OUT, and INOUT parameter usage and examples
@@ -120,7 +136,10 @@ Use when creating or managing stored procedures in PL/vSQL. Contains:
 - **Transaction Management**: COMMIT, ROLLBACK, and transaction semantics
 - **Performance**: Optimization strategies and best practices
 
-### 7. UDx Development (`references/udx-development-guide.md`)
+**Full Document:** [Stored Procedures](references/stored-procedures-guide.md)
+**Summary (for reduced context):** [Stored Procedures Summary](references/reference-summaries/stored-procedures-summary.md)
+
+### 8. UDx Development
 Use when developing complex User-Defined Extensions in C++, Python, Java, or R. Contains:
 - **Language-Specific Guides**: C++, Python, Java, R development
 - **UDx Types**: Scalar, aggregate, analytic, transform, and load functions
@@ -128,7 +147,9 @@ Use when developing complex User-Defined Extensions in C++, Python, Java, or R. 
 - **Best Practices**: Performance optimization and security considerations
 - **Deployment**: Registration and management of UDx libraries
 
-### 8. Query Optimization (`references/query-optimization.md`)
+**Document:** [UDx Development](references/udx-development-guide.md)
+
+### 9. Query Optimization
 Use when optimizing query performance. Contains:
 - Projection design patterns
 - Encoding strategies (RLE, DELTA, GZIP, LZO)
@@ -136,44 +157,32 @@ Use when optimizing query performance. Contains:
 - Resource management and monitoring
 - Performance anti-patterns and solutions
 
-### 9. Oracle Migration (`references/oracle-migration.md`)
-Use specifically for Oracle migrations. Contains:
-- PL/SQL to PL/vSQL conversion guide
-- Package migration strategies
-- Stored procedure examples with exception handling
-- Performance optimization for Oracle workloads
+**Document:** [Query Optimization](references/query-optimization.md)
 
-### 10. DB2 Migration (`references/db2-migration.md`)
-Use specifically for IBM DB2 migrations. Contains:
-- PL/SQL to PL/vSQL conversion guide
-- DB2 module/package migration strategies
-- Sequence handling and identity column conversion
-- MQT (Materialized Query Tables) to Live Aggregate Projections
-- DB2 special registers and system tables conversion
-- Performance optimization for DB2 workloads
+### 10. Database-Specific Migration Guides
+Each guide contains source-database-specific migration patterns, following the generic migration requirements:
 
-### 11. SQL Server Migration (`references/sqlserver-migration.md`)
-Use for SQL Server migrations. Contains:
-- T-SQL to Vertica SQL conversion patterns
-- Data type mappings and optimization strategies
-- Stored procedure migration with transaction handling
-- Performance optimization for SQL Server workloads
+#### Oracle Migration
+**Full Document:** [Oracle Migration](references/oracle-migration.md) - PL/SQL to PL/vSQL conversion guide, package migration strategies, stored procedure examples with exception handling
+**Summary (for reduced context):** [Oracle Migration Summary](references/reference-summaries/oracle-migration-summary.md)
 
-### 12. PostgreSQL Migration (`references/postgresql-migration.md`)
-Use for PostgreSQL migrations. Contains:
-- PL/pgSQL to PL/vSQL conversion guide
-- Array and JSON handling strategies
-- Function mapping and type conversions
-- Performance optimization for PostgreSQL workloads
+#### DB2 Migration
+**Full Document:** [DB2 Migration](references/db2-migration.md) - PL/SQL to PL/vSQL conversion guide, DB2 module/package migration, sequence handling, MQT to Live Aggregate Projections
+**Summary (for reduced context):** [DB2 Migration Summary](references/reference-summaries/db2-migration-summary.md)
 
-### 13. MySQL Migration (`references/mysql-migration.md`)
-Use for MySQL migrations. Contains:
-- MySQL SQL syntax to Vertica conversion
-- AUTO_INCREMENT to IDENTITY conversion
-- Storage engine differences and alternatives
-- Performance optimization for MySQL workloads
+#### SQL Server Migration
+**Full Document:** [SQL Server Migration](references/sqlserver-migration.md) - T-SQL to Vertica SQL conversion, stored procedure migration with transaction handling
+**Summary (for reduced context):** [SQL Server Migration Summary](references/reference-summaries/sqlserver-migration-summary.md)
 
-### 13. Machine Learning (`references/machine-learning.md`)
+#### PostgreSQL Migration
+**Full Document:** [PostgreSQL Migration](references/postgresql-migration.md) - PL/pgSQL to PL/vSQL conversion, Array and JSON handling, function mapping
+**Summary (for reduced context):** [PostgreSQL Migration Summary](references/reference-summaries/postgresql-migration-summary.md)
+
+#### MySQL Migration
+**Full Document:** [MySQL Migration](references/mysql-migration.md) - MySQL SQL syntax to Vertica conversion, AUTO_INCREMENT to IDENTITY, storage engine differences
+**Summary (for reduced context):** [MySQL Migration Summary](references/reference-summaries/mysql-migration-summary.md)
+
+### 11. Machine Learning
 Use for implementing in-database machine learning. Contains:
 - Complete coverage of regression, classification, clustering, and time series algorithms
 - Data preparation functions (imputation, encoding, outlier detection)
@@ -181,14 +190,18 @@ Use for implementing in-database machine learning. Contains:
 - Model management and deployment strategies
 - Integration with Python (VerticaPy) and R
 
-### 14. ML Function Mapping (`references/ml-function-mapping.md`)
+**Document:** [Machine Learning](references/machine-learning.md)
+
+### 12. ML Function Mapping
 Use for cross-database ML function equivalents. Contains:
 - Function mappings between Python (scikit-learn), R, and Vertica SQL
 - Data preparation, modeling, and evaluation function equivalents
 - Migration examples from popular ML frameworks
 - Performance considerations and best practices
 
-### 15. Multi-Agent Migration Workflow (`references/multi-agent-migration-guide.md`) 🤖 **FOR LARGE-SCALE MIGRATIONS**
+**Document:** [ML Function Mapping](references/ml-function-mapping.md)
+
+### 13. Multi-Agent Migration Workflow 🤖 **FOR LARGE-SCALE MIGRATIONS**
 **USE FOR COMPLEX MIGRATIONS** - This guide defines a 4-agent architecture to prevent context overflow and ensure rule adherence:
 
 **When to Use:**
@@ -208,6 +221,26 @@ Use for cross-database ML function equivalents. Contains:
 4. **Tester Agent (Sub-Agent)**: Validates migrated code using unified test method (single VSQL call with autocommit), provides pass/fail feedback with complete logs
 
 **Key Principle:** Only Migrator loads migration reference documents. Manager, Requester, and Tester only read this guide. Manager has NO migration expertise - NEVER provides migration rules or decisions to Migrator.
+
+**Multi-Agent Reference Documents:**
+- [Multi-Agent Quick Reference](references/multi-agent-quick-reference.md) - **PRIMARY REFERENCE** - Essential rules, personality traits, constraints, workflows, and verification checklists for all agents
+- [Multi-Agent Detailed Guide](references/multi-agent-detailed-guide.md) - **ON-DEMAND ONLY** - Load only for complex scenarios, troubleshooting, or training
+
+**Reference Document Summaries (Reduced Context):**
+- `references/reference-summaries/` directory contains condensed versions of large reference documents
+- Use these summaries to reduce context usage during migrations
+- Load full documents only when summary is insufficient
+
+**Summary Files:**
+- Core Documents: `generic-migration-summary.md`, `sql-syntax-summary.md`, `data-types-summary.md`, `oltp-to-olap-summary.md`
+- Stored Procedures and Functions: `stored-procedures-summary.md`, `user-defined-sql-functions-summary.md`
+- Database-Specific: `oracle-migration-summary.md`, `db2-migration-summary.md`, `sqlserver-migration-summary.md`, `postgresql-migration-summary.md`, `mysql-migration-summary.md`
+- **Note:** `function-mapping.md` is used directly (no summary needed - already concise)
+
+**Agent Configuration Files:**
+- [Requester Agent](agents/requester.md) - Source file reader configuration
+- [Migrator Agent](agents/migrator.md) - Code transformer configuration
+- [Tester Agent](agents/tester.md) - Test validator configuration
 
 ## Common User Requests and Responses
 
@@ -600,6 +633,81 @@ EOF
 - The `RAISE NOTICE` prints each DROP statement before executing it, so you can see what was cleaned.
 - Excludes the `isOrContains` built-in function from being dropped.
 - Only drops SQL functions (identified by `function_definition ILIKE 'return%'`), not C++/Java UDx functions.
+
+### Reference Document Summaries
+
+The `references/reference-summaries/` directory contains condensed versions of large reference documents. These summaries are designed to reduce context overhead for 128K context LLMs.
+
+**Usage Rule:**
+- **Agent configurations and Multi-Agent Quick Reference MUST reference summary versions** (e.g., `reference-summaries/generic-migration-summary.md`)
+- **DO NOT reference full documents** (e.g., `generic-migration-guide.md`) in agent configurations or quick reference
+- Load full documents only when summary is insufficient for complex scenarios
+
+**Maintenance Rule:**
+When a detailed reference document is updated, you MUST synchronize the corresponding summary document.
+
+**File Correspondence (9 summaries):**
+
+**Core Documents:**
+- `generic-migration-summary.md` ← `generic-migration-guide.md`
+- `sql-syntax-summary.md` ← `sql-syntax-reference.md`
+- `data-types-summary.md` ← `data-types.md`
+- `oltp-to-olap-summary.md` ← `oltp-to-olap-rewrite-guide.md`
+
+**Stored Procedures and Functions:**
+- `stored-procedures-summary.md` ← `stored-procedures-guide.md`
+- `user-defined-sql-functions-summary.md` ← `user-defined-sql-functions-guide.md`
+
+**Database-Specific Migration Guides:**
+- `oracle-migration-summary.md` ← `oracle-migration.md`
+- `db2-migration-summary.md` ← `db2-migration.md`
+- `sqlserver-migration-summary.md` ← `sqlserver-migration.md`
+- `postgresql-migration-summary.md` ← `postgresql-migration.md`
+- `mysql-migration-summary.md` ← `mysql-migration.md`
+
+**Summary Content Guidelines:**
+- Include key mappings and most frequently used rules
+- Use compact table format for quick reference
+- Include all information needed for migration decisions
+- Remove verbose examples and redundant content
+- Target: ~10-20% of original document size
+- **Exception:** Some concise reference documents (like `function-mapping.md`) are used directly without summaries
+
+### Summary Version Update Principles
+
+**Document Positioning:**
+- **Full documents** are for humans, containing detailed examples and explanations
+- **Summary versions** are for agents, containing only agent decision-making information
+
+**What Summaries MUST Include:**
+1. Core rules (MUST/MUST NEVER)
+2. Key constraints
+3. Important concepts
+4. Common pitfalls
+5. Key points
+6. Function mapping tables
+7. Data type mapping tables
+8. Important syntax
+9. Common complex scenario handling
+
+**What Summaries Should Exclude:**
+1. Examples (example code) — full documents have hyperlinks
+2. Repetitive content (multiple emphases on the same point)
+3. Detailed explanations (if core rules are already clear)
+4. Background introduction (if not important for migration decisions)
+5. Human-readable explanations
+
+**What Summaries Can Reference:**
+- Detailed examples via hyperlinks to full documents
+- Complex examples via hyperlinks
+- Background introduction via hyperlinks
+- Detailed explanations via hyperlinks
+
+**Maintenance Rule:**
+- Every time a full document is updated, check if the summary version needs to sync
+- If the full document adds new rules or constraints, the summary version must sync add
+- If the full document adds new examples, the summary version doesn't need to sync (agents don't need)
+- If the full document adds new detailed explanations, the summary version doesn't need to sync (agents don't need)
 
 ### Testing Features Covered
 

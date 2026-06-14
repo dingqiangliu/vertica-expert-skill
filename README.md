@@ -10,6 +10,8 @@ This skill is distilled from the Vertica product documentation and my memory to 
 - **Stored Procedures  and UDx Development**: Creating custom stored procedures or functions in SQL, C++, and Python
 - **Machine Learning**: In-database predictive analytics with regression, classification, clustering, and time series
 
+**📚 Reference Document Summaries:** For large-scale migrations using the Multi-Agent Workflow, agent-optimized summaries of reference documents are available in `references/reference-summaries/` directory. These summaries contain ALL information needed for migration decisions while reducing context usage by ~88%. Full documents are for human reference with detailed examples.
+
 ## Skill Structure
 
 ```
@@ -37,7 +39,20 @@ vertica-expert-skill/
 │   ├── mysql-migration.md                  # MySQL migration guide
 │   ├── machine-learning.md                 # In-database ML algorithms
 │   ├── ml-function-mapping.md              # Cross-database ML mapping
-│   └── multi-agent-migration-guide.md      # 🤖 Multi-agent migration architecture and workflow templates
+│   ├── multi-agent-quick-reference.md      # 🤖 Multi-agent quick reference (primary, shared by all agents)
+│   ├── multi-agent-detailed-guide.md      # 🤖 Multi-agent detailed guide (Manager MUST READ)
+│   └── reference-summaries/               # 📚 Agent-optimized reference summaries
+│       ├── generic-migration-summary.md   # Generic migration requirements (agent-optimized)
+│       ├── sql-syntax-summary.md          # SQL syntax reference (agent-optimized)
+│       ├── data-types-summary.md           # Data types (agent-optimized)
+│       ├── oltp-to-olap-summary.md        # OLTP→OLAP rewrite patterns (agent-optimized)
+│       ├── stored-procedures-summary.md   # Stored procedures guide (agent-optimized)
+│       ├── user-defined-sql-functions-summary.md # UDF guide (agent-optimized)
+│       ├── oracle-migration-summary.md    # Oracle migration (agent-optimized)
+│       ├── db2-migration-summary.md       # DB2 migration (agent-optimized)
+│       ├── sqlserver-migration-summary.md # SQL Server migration (agent-optimized)
+│       ├── postgresql-migration-summary.md # PostgreSQL migration (agent-optimized)
+│       └── mysql-migration-summary.md     # MySQL migration (agent-optimized)
 ├── examples/                               # Examples of other databases
 └── slides/                                 # Slides in Python format
 ```
@@ -45,13 +60,13 @@ vertica-expert-skill/
 ## Key Features
 
 ### 1. Database Migration
-- **Generic Migration Requirements** 🚨 **MANDATORY**: [Generic Migration Guide](references/generic-migration-guide.md) - Complete migration procedures that apply to ALL database types
-- **OLTP to OLAP Rewrite** 🔄 **ESSENTIAL**: [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) - 5 rewrite patterns for converting row-by-row procedural code to set-based SQL (adjacent DML merging, loop-DML→set-based, cursor→window functions, etc.)
-- **Oracle to Vertica**: [Oracle Migration Guide](references/oracle-migration.md) - PL/SQL to PL/vSQL conversion following generic migration requirements
-- **DB2 to Vertica**: [DB2 Migration Guide](references/db2-migration.md) - PL/SQL to PL/vSQL conversion with DB2-specific features (modules, MQT, special registers) following generic requirements
-- **SQL Server to Vertica**: [SQL Server Migration Guide](references/sqlserver-migration.md) - T-SQL to Vertica SQL with stored procedure migration following generic requirements
-- **PostgreSQL to Vertica**: [PostgreSQL Migration Guide](references/postgresql-migration.md) - PL/pgSQL to PL/vSQL with function mapping following generic requirements
-- **MySQL to Vertica**: [MySQL Migration Guide](references/mysql-migration.md) - Schema and query conversion with performance optimization following generic requirements
+- **Generic Migration Requirements** 🚨 **MANDATORY**: [Generic Migration Guide](references/generic-migration-guide.md) - Complete migration procedures that apply to ALL database types ([Agent-Optimized Summary](references/reference-summaries/generic-migration-summary.md))
+- **OLTP to OLAP Rewrite** 🔄 **ESSENTIAL**: [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) - 5 rewrite patterns for converting row-by-row procedural code to set-based SQL (adjacent DML merging, loop-DML→set-based, cursor→window functions, etc.) ([Agent-Optimized Summary](references/reference-summaries/oltp-to-olap-summary.md))
+- **Oracle to Vertica**: [Oracle Migration Guide](references/oracle-migration.md) - PL/SQL to PL/vSQL conversion following generic migration requirements ([Agent-Optimized Summary](references/reference-summaries/oracle-migration-summary.md))
+- **DB2 to Vertica**: [DB2 Migration Guide](references/db2-migration.md) - PL/SQL to PL/vSQL conversion with DB2-specific features (modules, MQT, special registers) following generic requirements ([Agent-Optimized Summary](references/reference-summaries/db2-migration-summary.md))
+- **SQL Server to Vertica**: [SQL Server Migration Guide](references/sqlserver-migration.md) - T-SQL to Vertica SQL with stored procedure migration following generic requirements ([Agent-Optimized Summary](references/reference-summaries/sqlserver-migration-summary.md))
+- **PostgreSQL to Vertica**: [PostgreSQL Migration Guide](references/postgresql-migration.md) - PL/pgSQL to PL/vSQL with function mapping following generic requirements ([Agent-Optimized Summary](references/reference-summaries/postgresql-migration-summary.md))
+- **MySQL to Vertica**: [MySQL Migration Guide](references/mysql-migration.md) - Schema and query conversion with performance optimization following generic requirements ([Agent-Optimized Summary](references/reference-summaries/mysql-migration-summary.md))
 
 ### 2. Vertica SQL Development
 - **Complete SQL Syntax**: DDL, DML, queries, CTEs, window functions
@@ -133,7 +148,9 @@ This skill provides comprehensive coverage of:
 ### For Database Migration
 1. **Install the skill** using `./install.sh`
 2. **Read [Generic Migration Guide](references/generic-migration-guide.md)** (from vertica-expert skill) 🚨 **MANDATORY** - Understand all requirements before proceeding
+   - 💡 **For Multi-Agent Workflow**: Use [Summary version](references/reference-summaries/generic-migration-summary.md) to reduce context usage
 3. **Read [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)** (from vertica-expert skill) 🔄 **ESSENTIAL** - Learn rewrite patterns for procedural/OLTP code
+   - 💡 **For Multi-Agent Workflow**: Use [Summary version](references/reference-summaries/oltp-to-olap-summary.md) to reduce context usage
 4. **Identify your source database** (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
 5. **Process source files sequentially** - never skip or reorder objects
 6. **Migrate ALL objects** - tables, views, procedures, functions, DML, sequences
@@ -160,7 +177,9 @@ This skill provides comprehensive coverage of:
 
 ### Migration Process
 1. **Read [Generic Migration Guide](references/generic-migration-guide.md)** 🚨 **MANDATORY FIRST STEP** - Understand all non-negotiable requirements
+   - 💡 **For Multi-Agent Workflow**: Use [Summary version](references/reference-summaries/generic-migration-summary.md) to reduce context usage
 2. **Read [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)** 🔄 **ESSENTIAL** - Understand rewrite patterns for procedural code
+   - 💡 **For Multi-Agent Workflow**: Use [Summary version](references/reference-summaries/oltp-to-olap-summary.md) to reduce context usage
 3. **Assess** your current database complexity and dependencies
 4. **Plan** your migration strategy following sequential processing requirements
 5. **Convert** ALL objects (tables, views, procedures, functions, DML) one-to-one
@@ -184,8 +203,9 @@ For common database script migrations , follow this simple approach:
 
 - First：
    ```prompt
-   Task: Migrate Oracle database scripts from "examples/oracle/" to Vertica, saving results to "examples/vertica/" with identical file names.
+   Task: Using general migration workflow to migrate Oracle database scripts from "examples/oracle/" to Vertica, saving results to "examples/vertica/" with identical file names.
    
+   NEVER touch source files at first, they may be huge.
    Before actually starting the task, please read the reference documents related to this task provided by vertica-expert skill, and then provide a detailed description of all the specific requirements you have understood for this task. Finally, pause and wait for my confirmation.
    ```
 - Then：
@@ -201,6 +221,7 @@ Or in Chinese if you prefer:
    ```prompt
    任务：将 "examples/oracle/" 目录下的 Oracle 数据库脚本迁移到 Vertica，并将结果保存到 "examples/vertica/" 目录，保持文件名一致。
    
+   一开始千万不要碰源文件，它们可能很大。
    在真正开始执行任务之前，先阅读  vertica-expert skill 提供的与本次任务相关的参考文档，然后详细描述你理解到的这次任务的所有详细要求。最后暂停，等待我的确认。
    ```
 - Then：
@@ -244,10 +265,10 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 | Agent | Role | Key Constraint |
 |-------|------|----------------|
-| **Manager** (main session) | **INITIALIZES BACKGROUND AGENTS AT STARTUP**, coordinates workflow, **strictly verifies** Migrator/Tester results, appends to target, **communicates via SendMessage** | 🚫 **NEVER reads source files or migration references** — only reads [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md), **NEVER re-spawns agents for each task** |
+| **Manager** (main session) | **INITIALIZES BACKGROUND AGENTS AT STARTUP**, coordinates workflow, **strictly verifies** Migrator/Tester results, appends to target, **communicates via SendMessage** | 🚫 **NEVER reads source files or migration references** — reads [Multi-Agent Quick Reference](references/multi-agent-quick-reference.md) and [Multi-Agent Detailed Guide](references/multi-agent-detailed-guide.md), **NEVER re-spawns agents for each task** |
 | **Requester** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Reads source files section-by-section using `Read(offset=N, limit=50)`, identifies complete objects | 🚫 **EXCLUSIVE file reader** — no migration knowledge, returns code as-is |
-| **Migrator** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Performs code transformation, unit tests before returning | 🚫 **ONLY agent** that loads migration reference documents |
-| **Tester** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Validates migrated code in single VSQL call with autocommit | 🚫 **ONLY reads** [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) |
+| **Migrator** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Performs code transformation, unit tests before returning | 🚫 **ONLY agent** that loads migration reference document summaries |
+| **Tester** (sub-agent) | **Runs in BACKGROUND MODE** — initialized once, persists across tasks. Validates migrated code in single VSQL call with autocommit | 🚫 **ONLY reads** [Multi-Agent Quick Reference](references/multi-agent-quick-reference.md) |
 
 **Workflow Loop:**
 
@@ -280,6 +301,7 @@ Phase 2: Integration Testing (after ALL objects migrated)
 ```prompt
 Task: Please use the Multi-Agent Migration Workflow to migrate [source_db] scripts from "[source_path]" to Vertica, saving results to "[target_path]" with identical file names.
 
+NEVER touch source files at first, they may be huge.
 You are the Manager agent. Before starting, wait for my confirmation.
 ```
 
@@ -287,6 +309,7 @@ Example:
 ```prompt
 Task: Please use the Multi-Agent Migration Workflow to migrate SQL Server database scripts from "examples/sqlserver/*.sql" to Vertica, saving results to "examples/vertica/" with identical file names.
 
+NEVER touch source files at first, they may be huge.
 You are the Manager agent. Before starting, wait for my confirmation.
 ```
 
@@ -300,10 +323,36 @@ Then monitor and frequently remind the Manager:
 5. Use SendMessage for all subsequent tasks. If you lose the IDs of the subagents, just look for them it in the place where Claude stores subagent information.
 ```
 
+Remind the Manager when the context is about to be exhausted：
+
+```prompt
+Save the state in preparation for compacting.
+```
+
+Guide the Manager after compact：
+
+```prompt
+Go ahead. You have the IDs of the subagents, you can SendMessage with them directly.
+```
+
 **Reference Documentation:**
 
-- **Manager/Requester/Tester read:** [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md)
-- **Migrator only:** [Generic Migration Guide](references/generic-migration-guide.md), [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md), database-specific guides, and all other references
+- **Manager reads:**
+  - [Multi-Agent Quick Reference](references/multi-agent-quick-reference.md) - Essential rules, personality traits, constraints, workflows, and verification checklists (**PRIMARY REFERENCE**)
+  - [Multi-Agent Detailed Guide](references/multi-agent-detailed-guide.md) - **MUST READ** for initialization templates and detailed workflows
+
+- **Requester/Tester read:**
+  - [Multi-Agent Quick Reference](references/multi-agent-quick-reference.md) - Essential rules, personality traits, constraints, workflows, and verification checklists (**PRIMARY REFERENCE**)
+
+- **Migrator only (summary versions for reduced context):**
+  - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md)
+  - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md)
+  - Database-specific migration guide summaries (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
+  - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
+  - [Function Mapping Guide](references/function-mapping.md)
+  - [Data Types](references/reference-summaries/data-types-summary.md)
+  - [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md)
+  - [User-Defined SQL Functions Guide](references/reference-summaries/user-defined-sql-functions-summary.md)
 
 **Manager Verification Checklist:**
 1. **Migrator's Unit Test:** Performed? Logs complete? No WARNING/ERROR anomalies? Status PASSED?

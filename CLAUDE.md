@@ -1,616 +1,208 @@
-# CLAUDE.md - Vertica Expert Skill
+# CLAUDE.md - Vertica Expert Skill Contributor Guide
 
-This file provides documentation for the Vertica Expert skill to help Claude understand how to use it effectively.
+> **This file is for contributors/maintainers working WITH Claude Code to understand project architecture, documentation system, and maintenance procedures.**
+> **For execution rules Claude Code follows, see SKILL.md. For user-facing usage guide, see README.md.**
+> **For detailed procedures, checklists, and best practices, see CONTRIBUTOR_GUIDE.md.**
 
-## Overview
+---
 
-The **Vertica Expert** skill is a comprehensive tool for migrating databases from other systems (Oracle, DB2, SQL Server, PostgreSQL, MySQL) to Vertica and implementing machine learning workflows, with a focus on performance optimization and best practices.
+## Part 1: Working with Claude Code
 
-## When to Use This Skill
+### 1.1 Development Workflow
 
-Use this skill when users need help with:
+When you activate the vertica-expert skill for **development and maintenance**, the flow is:
 
-1. **SQL Query Conversion** - Converting queries from other databases to Vertica syntax
-2. **Schema Migration** - Converting table definitions, data types, and constraints
-3. **Function Mapping** - Finding Vertica equivalents for functions from other databases
-4. **Stored Procedure Migration** - Converting PL/SQL, T-SQL, or PL/pgSQL to PL/vSQL
-5. **User-Defined SQL Functions Development** - Creating custom functions in SQL
-6. **Stored Procedures Development** - Creating stored procedures in PL/vSQL
-7. **UDx Development** - Creating custom functions in C++, Python, Java, or R
-8. **Projection Design** - Designing optimal projections for query performance
-9. **Performance Optimization** - Optimizing queries and database design for Vertica's columnar architecture
-10. **Machine Learning** - Implementing in-database ML workflows (regression, classification, clustering, time series)
-11. **Data Science** - End-to-end analytics workflows within Vertica
+1. Claude Code reads CLAUDE.md (entry point for development)
+2. You request changes (e.g., "Add Oracle 23c support")
+3. Claude Code reads relevant reference documents (from references/)
+4. Claude Code makes changes following your guidance
+5. Claude Code updates corresponding summary (reference-summaries/)
+6. Claude Code tests with examples (examples/vertica/)
+7. You verify the changes work correctly
 
-## How to Use This Skill
+**Key Difference**: In development workflow, Claude Code is your **collaborator** following your guidance. In migration workflow (SKILL.md), Claude Code is the **executor** following rules.
 
-### Basic Usage Pattern
+### 1.2 Setup Requirements
 
-```
-User asks: "Convert [source_db] query to Vertica: [SQL code]"
-
-Claude should:
-1. Identify the source database
-2. Convert SQL syntax to Vertica
-3. Map functions to Vertica equivalents
-4. Suggest performance optimizations
-5. Provide projection design recommendations if applicable
-```
-
-### Machine Learning Usage Pattern
-
-```
-User asks: "Implement [ML task] in Vertica using [algorithm]"
-
-Claude should:
-1. Identify the appropriate Vertica ML algorithm
-2. Provide data preparation guidance
-3. Show model training syntax
-4. Include evaluation metrics
-5. Demonstrate deployment for predictions
-```
-
-### Advanced Usage Pattern
-
-```
-User asks: "I need to migrate [complex object] from [source_db] to Vertica"
-
-Claude should:
-1. Analyze the complexity and requirements
-2. Provide step-by-step migration approach
-3. Include performance considerations
-4. Suggest testing and validation strategies
-5. Reference appropriate sections of the skill documentation
-```
-
-## Key Reference Files
-
-### 1. Generic Migration Guide (`references/generic-migration-guide.md`) 🚨 **MANDATORY READING**
-**USE FOR ALL DATABASE MIGRATIONS** - This is the master reference that defines non-negotiable requirements:
-- **Complete Migration Requirements**: ALL objects must be migrated (no selective migration)
-- **Sequential Processing**: Process source files in exact order (no skipping or reordering)
-- **Object Integrity**: Never break up complete objects or statements
-- **One-to-One Conversion**: Tables→Tables, Views→Views, Procedures→Procedures
-- **Mandatory Testing**: Test every object individually before considering it migrated
-- **No Automation**: Never use scripts or bulk processing
-- **Reference Priority**: This guide takes precedence over all other migration guides
-
-### 1.5. OLTP to OLAP Rewrite Guide (`references/oltp-to-olap-rewrite-guide.md`) 🔄 **ESSENTIAL FOR PROCEDURAL CODE**
-**USE WHENEVER MIGRATING PROCEDURAL/OLTP CODE** - This guide covers the architectural paradigm shift from row-by-row to set-based processing:
-- **5 Rewrite Patterns**: Adjacent DML merging, loop-DML→set-based SQL, cursor→window functions, function-call→join, recursive CTE, etc.
-- **Before/After Examples**: Each scenario shows the anti-pattern and the optimized Vertica rewrite
-- **Migration Checklist**: Comprehensive checklist to audit migrated code for OLTP anti-patterns
-- **Decision Framework**: Flowchart for choosing the right rewrite approach
-- **Anti-Pattern Rejection List**: Patterns that should always be flagged and rewritten
-
-### 2. Migration Guides Overview (`references/migration-guides-overview.md`)
-Shows the hierarchical relationship between all migration guides and provides usage instructions for each database type.
-
-### 3. Data Types (`references/data-types.md`)
-Use when converting table schemas. Contains:
-- Complete data type mapping between source databases and Vertica
-- Optimization strategies for storage and performance
-- Complex types (ARRAY, ROW, SET, spatial)
-- Migration examples for each database system
-
-### 4. Function Mapping (`references/function-mapping.md`)
-Use when users need to convert specific functions. Contains:
-- 100+ function mappings from Oracle, DB2, SQL Server, PostgreSQL, MySQL
-- Aggregate functions (including approximate variants)
-- String, date, mathematical, and analytic functions
-- Type conversion functions and optimization guidelines
-
-### 5. User-Defined SQL Functions (`references/user-defined-sql-functions-guide.md`)
-Use when creating or managing User-Defined SQL Functions. Contains comprehensive coverage of:
-- **Quick Start**: Basic examples and syntax
-- **Complete Reference**: CREATE FUNCTION syntax with all parameters
-- **Practical Examples**: Data cleaning, business logic, mathematical functions, date/time utilities
-- **Function Management**: Creation, modification, overloading, privileges
-- **Performance**: Optimization guidelines and testing strategies
-- **Best Practices**: Naming conventions, error handling, documentation
-- **Troubleshooting**: Common issues and debugging tips
-
-### 6. Stored Procedures (`references/stored-procedures-guide.md`)
-Use when creating or managing stored procedures in PL/vSQL. Contains:
-- **PL/vSQL Fundamentals**: Syntax, variables, control structures
-- **Parameter Modes**: IN, OUT, and INOUT parameter usage and examples
-- **SQL Command Scope**: Which commands work inside vs outside stored procedures
-- **Development Guide**: Complete stored procedure development lifecycle
-- **Exception Handling**: Error management with GET STACKED DIAGNOSTICS
-- **Transaction Management**: COMMIT, ROLLBACK, and transaction semantics
-- **Performance**: Optimization strategies and best practices
-
-### 7. UDx Development (`references/udx-development-guide.md`)
-Use when developing complex User-Defined Extensions in C++, Python, Java, or R. Contains:
-- **Language-Specific Guides**: C++, Python, Java, R development
-- **UDx Types**: Scalar, aggregate, analytic, transform, and load functions
-- **Development Environment**: Setup and compilation instructions
-- **Best Practices**: Performance optimization and security considerations
-- **Deployment**: Registration and management of UDx libraries
-
-### 8. Query Optimization (`references/query-optimization.md`)
-Use when optimizing query performance. Contains:
-- Projection design patterns
-- Encoding strategies (RLE, DELTA, GZIP, LZO)
-- Join optimization techniques
-- Resource management and monitoring
-- Performance anti-patterns and solutions
-
-### 9. Oracle Migration (`references/oracle-migration.md`)
-Use specifically for Oracle migrations. Contains:
-- PL/SQL to PL/vSQL conversion guide
-- Package migration strategies
-- Stored procedure examples with exception handling
-- Performance optimization for Oracle workloads
-
-### 10. DB2 Migration (`references/db2-migration.md`)
-Use specifically for IBM DB2 migrations. Contains:
-- PL/SQL to PL/vSQL conversion guide
-- DB2 module/package migration strategies
-- Sequence handling and identity column conversion
-- MQT (Materialized Query Tables) to Live Aggregate Projections
-- DB2 special registers and system tables conversion
-- Performance optimization for DB2 workloads
-
-### 11. SQL Server Migration (`references/sqlserver-migration.md`)
-Use for SQL Server migrations. Contains:
-- T-SQL to Vertica SQL conversion patterns
-- Data type mappings and optimization strategies
-- Stored procedure migration with transaction handling
-- Performance optimization for SQL Server workloads
-
-### 12. PostgreSQL Migration (`references/postgresql-migration.md`)
-Use for PostgreSQL migrations. Contains:
-- PL/pgSQL to PL/vSQL conversion guide
-- Array and JSON handling strategies
-- Function mapping and type conversions
-- Performance optimization for PostgreSQL workloads
-
-### 13. MySQL Migration (`references/mysql-migration.md`)
-Use for MySQL migrations. Contains:
-- MySQL SQL syntax to Vertica conversion
-- AUTO_INCREMENT to IDENTITY conversion
-- Storage engine differences and alternatives
-- Performance optimization for MySQL workloads
-
-### 13. Machine Learning (`references/machine-learning.md`)
-Use for implementing in-database machine learning. Contains:
-- Complete coverage of regression, classification, clustering, and time series algorithms
-- Data preparation functions (imputation, encoding, outlier detection)
-- Model evaluation metrics and validation techniques
-- Model management and deployment strategies
-- Integration with Python (VerticaPy) and R
-
-### 14. ML Function Mapping (`references/ml-function-mapping.md`)
-Use for cross-database ML function equivalents. Contains:
-- Function mappings between Python (scikit-learn), R, and Vertica SQL
-- Data preparation, modeling, and evaluation function equivalents
-- Migration examples from popular ML frameworks
-- Performance considerations and best practices
-
-### 15. Multi-Agent Migration Workflow (`references/multi-agent-migration-guide.md`) 🤖 **FOR LARGE-SCALE MIGRATIONS**
-**USE FOR COMPLEX MIGRATIONS** - This guide defines a 4-agent architecture to prevent context overflow and ensure rule adherence:
-
-**When to Use:**
-- ✅ More than 1 source file
-- ✅ Single source file exceeds 200 lines
-- ✅ Contains multiple stored procedures or functions
-- ✅ Large-scale migrations requiring strict context management
-
-**When NOT to Use:**
-- ❌ Only 1 small file
-- ❌ Simple table structure migration
-
-**Architecture:**
-1. **Manager Agent (Main Session)**: Controls workflow coordination, dispatches tasks, **🚫 NEVER reads source files or migration reference documents**, **STRICTLY VERIFIES** Migrator's unit test and Tester's test results
-2. **Requester Agent (Sub-Agent)**: Reads source files section-by-section using `Read(offset=N, limit=50)`, **EXCLUSIVE responsibility for file reading**, groups consecutive DML on same table
-3. **Migrator Agent (Sub-Agent)**: **ONLY agent that loads migration reference documents** (basic docs at startup, additional docs on-demand), performs code transformation, unit tests before returning
-4. **Tester Agent (Sub-Agent)**: Validates migrated code using unified test method (single VSQL call with autocommit), provides pass/fail feedback with complete logs
-
-**Key Principle:** Only Migrator loads migration reference documents. Manager, Requester, and Tester only read this guide. Manager has NO migration expertise - NEVER provides migration rules or decisions to Migrator.
-
-## Common User Requests and Responses
-
-### Request: Simple Function Conversion
-**User**: "What's the Vertica equivalent of Oracle's NVL function?"
-
-**Response**: "In Vertica, use `COALESCE()` instead of Oracle's `NVL()`. Both serve the same purpose, but `COALESCE()` is ANSI standard and preferred. Example: `COALESCE(column_name, 'default_value')`"
-
-### Request: Query Conversion
-**User**: "Convert this Oracle query to Vertica: SELECT NVL(name, 'Unknown') FROM users"
-
-**Response**: "Here's the Vertica equivalent: `SELECT COALESCE(name, 'Unknown') FROM users`. I've converted `NVL()` to `COALESCE()`. For optimal performance, consider creating a projection with appropriate encoding for the name column."
-
-### Request: Stored Procedure Migration
-**User**: "I need to convert this Oracle PL/SQL procedure to Vertica"
-
-**Response": "I'll help you convert this PL/SQL procedure to Vertica PL/vSQL. Key changes needed:
-1. Change `NUMBER` to `INTEGER` or `NUMERIC`
-2. Replace `SQL%ROWCOUNT` with `FOUND` special variable or separate count query
-3. Change `SYSDATE` to `SYSDATE()`
-4. Use `PERFORM` to discard output (row counts, Tuples/Tuple, status messages) for DDL, DML, CALL, COMMIT, ROLLBACK, and EXECUTE when not capturing return values
-5. Add proper DECLARE block for all variables
-6. Update exception handling with `GET STACKED DIAGNOSTICS`
-7. Update exception handling syntax
-
-Let me provide the complete conversion..."
-
-### Request: Performance Optimization
-**User**: "This query is slow in Vertica, how can I optimize it?"
-
-**Response": "I'll help optimize this query for Vertica's columnar architecture. First, let me analyze the query plan. Key optimization strategies:
-1. Design appropriate projections with optimal sort order
-2. Use proper encoding for each column
-3. Consider live aggregate projections for summary queries
-4. Update statistics with ANALYZE_STATISTICS()
-
-Let me provide specific recommendations..."
-
-### Request: User-Defined SQL Function Creation
-**User**: "I need to create a function that replaces NULL values with defaults in Vertica"
-
-**Response**: "I'll help you create a User-Defined SQL Function for NULL handling. Here's an example:
-
-```sql
--- Create function to replace NULL with zero
-CREATE FUNCTION myzeroifnull(x INT) RETURN INT
-   AS BEGIN
-     RETURN (CASE WHEN (x IS NOT NULL) THEN x ELSE 0 END);
-   END;
-
--- Usage examples
-SELECT myzeroifnull(column_name) FROM table_name;
-SELECT COUNT(*) FROM table_name GROUP BY myzeroifnull(column_name);
-```
-
-Key points about User-Defined SQL Functions:
-1. Use CREATE FUNCTION with RETURN type and BEGIN/END block
-2. Can be used anywhere SQL expressions are valid
-3. Cannot contain FROM, WHERE, GROUP BY clauses
-4. Support function overloading with different argument types
-5. Vertica infers volatility (IMMUTABLE, STABLE, VOLATILE) automatically
-
-For more complex logic requiring procedural code, consider C++, Python, Java, or R UDxs instead."
-
-### Request: Machine Learning Implementation
-**User**: "How do I implement customer churn prediction in Vertica?"
-
-**Response": "I'll help you implement customer churn prediction using Vertica's in-database machine learning. Here's the complete workflow:
-1. Data preparation: Handle missing values and encode categorical features
-2. Model training: Use RF_CLASSIFIER for robust classification
-3. Model evaluation: Calculate accuracy, precision, recall metrics
-4. Deployment: Create prediction views for real-time scoring
-
-Example implementation:
-```sql
--- Train churn prediction model
-SELECT RF_CLASSIFIER('churn_model', 'customer_data',
-    'churned', 'age, income, tenure, support_calls');
-
--- Make real-time predictions
-SELECT customer_id,
-       PREDICT_RF_CLASSIFIER(features
-           USING PARAMETERS model_name='churn_model')
-FROM new_customers;
-```
-
-## Best Practices for Using This Skill
-
-### 1. Progressive Disclosure
-- Start with basic conversions
-- Add optimization recommendations
-- Provide advanced guidance as needed
-
-### 2. Cross-Reference Documentation
-- Reference specific sections when providing detailed guidance
-- Use the table of contents to help users navigate
-- Provide links to relevant examples
-
-### 3. Performance Focus
-- Always consider Vertica's columnar architecture
-- Recommend projection design for new implementations
-- Suggest encoding strategies for optimal compression
-- Emphasize statistics management
-- Leverage in-database processing for ML workflows
-
-### 4. User-Defined SQL Functions Best Practices
-- **Start Simple**: Use SQL functions for simple transformations before complex UDxs
-- **Choose Appropriately**: SQL functions for simple expressions, C++/Python/Java/R for complex logic
-- **Handle NULLs**: Always consider NULL value handling in function logic
-- **Test Thoroughly**: Test with various data types, edge cases, and NULL inputs
-- **Manage Dependencies**: Track and update views when modifying functions
-- **Use Overloading**: Create multiple versions for different data types when needed
-
-### 5. Transaction Semantics in Stored Procedures
-- **Automatic commits**: Top-level procedures auto-commit on success, auto-rollback on failure
-- **Manual commits**: COMMIT statements are allowed and persist even if procedure later fails
-- **Nested procedures**: Do not start their own transactions
-- **Best practice**: Prefer automatic transaction handling, use manual COMMIT sparingly
-- **Error handling**: Use GET STACKED DIAGNOSTICS for detailed error information
-
-### 6. PL/vSQL Command Scope Best Practices
-- **Understand command limitations**: Know which commands work only in PL/vSQL vs. both contexts
-- **PERFORM to discard output**: Use PERFORM for DDL, DML, CALL, COMMIT, ROLLBACK, and EXECUTE when discarding output (row counts, Tuples/Tuple, status messages)
-- **RAISE for messaging**: Use RAISE NOTICE/WARNING/EXCEPTION for debugging and error handling
-- **Variable assignment**: Use `:=` for regular assignment, `<-` for truncating assignment
-- **External alternatives**: Use DO blocks for anonymous PL/vSQL execution outside procedures
-- **Dynamic SQL**: Use EXECUTE with proper quoting functions to prevent SQL injection
-
-### 7. Migration Strategy
-- Break down complex migrations into manageable steps
-- Provide testing recommendations
-- Include rollback strategies where appropriate
-- Suggest performance benchmarking approaches
-
-## Integration with Other Skills
-
-This skill works well with:
-- **Database design skills** for schema optimization
-- **Performance analysis skills** for query tuning
-- **Code review skills** for validating conversions
-- **Testing skills** for migration validation
-
-## Limitations and Considerations
-
-### Skill Limitations
-- Focuses on SQL and procedural code conversion
-- Does not handle application-level changes
-- May not cover extremely database-specific features
-
-### Important Considerations
-- Always test converted code thoroughly
-- Consider data volume and performance requirements
-- Plan for proper statistics management
-- Account for Vertica's distributed architecture
-
-## Troubleshooting Common Issues
-
-### Issue: Function Not Found
-**Solution**: Check the function mapping guide for alternatives or suggest UDx development
-
-### Issue: Performance Degradation
-**Solution**: Review projection design, encoding strategies, and statistics
-
-### Issue: Data Type Incompatibility
-**Solution**: Use the data type mapping guide and consider explicit casting
-
-### Issue: Transaction Differences
-**Solution**: Explain Vertica's transaction model and provide alternatives
-
-### Issue: ML Model Convergence
-**Solution**: Check data quality, adjust algorithm parameters, and verify feature engineering
-
-### Issue: ML Memory Errors
-**Solution**: Increase resource pool memory, reduce dataset size, or optimize feature selection
-
-### Issue: PL/vSQL Command Scope Error
-**Solution**: Verify command usage context - PERFORM, RAISE, and variable assignments only work in PL/vSQL. Use DO blocks for testing outside procedures.
-
-### Issue: EXECUTE Command Confusion
-**Solution**: Distinguish between external EXECUTE (prepared statements) and PL/vSQL EXECUTE (dynamic SQL). Use appropriate syntax for each context.
-
-## Example Workflows
-
-### Workflow 1: Simple Query Conversion
-1. Identify source database and query
-2. Convert syntax using function mapping guide
-3. Suggest performance optimizations
-4. Provide testing recommendations
-
-### Workflow 2: Complete Database Migration
-1. Analyze source schema complexity
-2. Plan migration strategy
-3. Convert DDL (tables, indexes, constraints)
-4. Transform SQL queries and stored procedures
-5. Design optimal projections
-6. Test and optimize performance
-
-### Workflow 3: Performance Optimization
-1. Analyze current query performance
-2. Review query plan and execution statistics
-3. Design appropriate projections
-4. Implement encoding strategies
-5. Update statistics and retest
-
-### Workflow 4: Machine Learning Implementation
-1. Define ML problem (regression, classification, clustering, time series)
-2. Prepare training data with feature engineering
-3. Select appropriate Vertica ML algorithm
-4. Train model using in-database functions
-5. Evaluate model performance with built-in metrics
-6. Deploy model for production predictions
-
-### Workflow 5: PL/vSQL Command Scope Troubleshooting
-1. Identify whether command is PL/vSQL-specific or shared
-2. For PL/vSQL-only commands (PERFORM, RAISE, etc.): ensure usage within stored procedures
-3. For shared commands (CALL, DO, EXECUTE): verify correct context and syntax
-4. Use DO blocks for testing PL/vSQL code outside procedures
-5. Convert external SQL to appropriate PL/vSQL constructs when migrating to procedures
-
-## Testing Vertica SQL and Stored Procedures
-
-This skill provides comprehensive Vertica SQL statements and stored procedures that can be tested using the VSQL command-line tool.
-
-### VSQL Testing Setup
-
-The environment variable `VSQL` should encapsulate connection parameters:
-```bash
-export VSQL='/opt/vertica/bin/vsql -h hostname -p 5433 -U username -w password dbname'
-```
-
-**Important Autocommit Behavior**: By default, vsql has **autocommit OFF** for interactive sessions, meaning you must explicitly COMMIT transactions for data modifications to persist. This is different from client libraries which have autocommit ON by default.
-
-To enable autocommit in vsql (recommended for testing):
-```sql
-SET SESSION AUTOCOMMIT TO ON;
-```
-
-To disable autocommit (vsql default behavior):
-```sql
-SET SESSION AUTOCOMMIT TO OFF;
-```
-
-For testing scripts, it's recommended to either:
-1. Enable autocommit at the start: `SET SESSION AUTOCOMMIT TO ON;`
-2. Include explicit COMMIT statements after data modifications
-3. Execute related statements (INSERT/SELECT) in the same $VSQL command
-
-### VSQL Command Reference
-
-From ~/Downloads/vertica_doc/, key vsql usage patterns:
-
-- **Execute single command or  single-line SQL**: `$VSQL -c "SELECT VERSION();"`
-
-- **Execute multi-line SQL**: Use here document to avoid escaping special characters like `$` and `"`:
-
-  ```bash
-  $VSQL<<-'EOF'
-  SQL1;
-  SQL2;
-  ...
-  EOF
-  ```
-
-- **Run SQL file**: `$VSQL -f script.sql`
-
-- **Interactive mode**: `$VSQL` (then enter SQL statements)
-
-- **Enable timing**: `$VSQL -i` (shows query execution time)
-
-- **Check availability of a schema**: `$VSQL -c "\dn schema_name"`
-
-- **Check availability of a table**: `$VSQL -c "\dt table_name"`
-
-- **Check availability of a view**: `$VSQL -c "\dt view_name"`
-
-- **Check availability of a projection**: `$VSQL -c "\dj projection_name"`
-
-- **Check availability of a function**: `$VSQL -c "\df function_name"`
-
-  # Check availability of a function
-  $VSQL -c "\df *function_name*"
-
-### Example Test Commands
+**Create project-level skill symlink** (one-time setup):
 
 ```bash
-# Test basic connectivity
-$VSQL -c "SELECT VERSION(), CURRENT_DATE, USER;"
-
-# Test table operations
-$VSQL -c "CREATE TABLE test (id INTEGER, name VARCHAR(50));"
-$VSQL -c "INSERT INTO test VALUES (1, 'example');"
-$VSQL -c "SELECT * FROM test;"
-
-# Test stored procedure creation
-$VSQL<<-'EOF'
-CREATE OR REPLACE PROCEDURE test_proc() AS $$
-BEGIN
-    RAISE NOTICE 'Test procedure executed';
-END;
-$$
-EOF
-
-# Call stored procedure
-$VSQL -c "CALL test_proc();"
-
-# Test analytic functions
-$VSQL<<-'EOF'
-SELECT id, name,
-       ROW_NUMBER() OVER (ORDER BY id) as row_num
-FROM test;
-EOF
-
-# Test error handling in procedures
-$VSQL<<-'EOF'
-CREATE OR REPLACE PROCEDURE test_error() AS $$
-DECLARE
-    v_error_msg VARCHAR;
-BEGIN
-    -- Intentionally cause an error
-    PERFORM INSERT INTO nonexistent_table VALUES (1);
-EXCEPTION
-    WHEN OTHERS THEN
-        GET STACKED DIAGNOSTICS v_error_msg = MESSAGE_TEXT;
-        RAISE NOTICE 'Caught error: %', v_error_msg;
-END;
-$$
-EOF
-
-# Test function mapping (Oracle NVL to Vertica COALESCE)
-$VSQL -c "SELECT COALESCE(NULL, 'default_value') as result;"
-
-# Enable autocommit for testing (recommended)
-$VSQL -c "SET SESSION AUTOCOMMIT TO ON;"
-
-# Test statistics
-$VSQL -c "SELECT ANALYZE_STATISTICS('test');"
-
-
-# List all ML models in the database
-$VSQL -c "SELECT model_name, model_type, owner_name, create_time, size FROM V_CATALOG.MODELS;"
-
-# Find specific ML model
-$VSQL -c "SELECT * FROM V_CATALOG.MODELS WHERE model_name = 'your_model_name';"
-
-# Delete a single ML model
-$VSQL -c "DROP MODEL model_name;"
-
-# Delete multiple ML models
-$VSQL -c "DROP MODEL model1, model2, model3;"
+cd /path/to/vertica-expert-skill
+mkdir -p .claude/skills
+ln -s $(pwd) .claude/skills/vertica-expert
 ```
 
-### Clean Test Database
+**Important**: This symlink is **NOT** committed to git (add to `.gitignore`).
 
-Use this PL/vSQL anonymous block to drop all user-created objects (procedures, functions, views, tables, sequences) from the database. Excludes system schemas (`v_txtindex`, `v_catalog`, `v_monitor`, `v_func`, `pg_catalog`).
+### 1.3 Key Principles
 
-```sql
-$VSQL<<-'EOF'
-do $$
-declare sql varchar;
-begin
-  for sql in query
-    -- drop all user stored procedures
-    select 'drop procedure if exists '||schema_name||'.'||procedure_name||'('|| procedure_arguments||');' as sql from user_procedures where schema_name not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    union all
-    -- drop all user SQL functions
-    select 'drop function if exists '||schema_name||'.'||function_name||'('||function_argument_type||');' from user_functions where schema_name not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog') and function_name not in ('isOrContains') and  function_definition ilike 'return%'
-    union all
-    -- drop all user views
-    select 'drop view if exists '||table_schema||'.'||table_name||' cascade;' from views where table_schema not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    union all
-    -- drop all user tables
-    select 'drop table if exists '||table_schema||'.'||table_name||' cascade;' from tables where table_schema not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    union all
-    -- drop all user sequences
-    select 'drop sequence if exists '||sequence_schema||'.'||sequence_name||';' from sequences where sequence_schema not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    -- drop all user schemas
-    union all
-    select 'drop schema if exists '||schema_name||';' from schemata where schema_name not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog', 'public')
-    
-  loop
-    raise notice '%', sql; perform execute sql;
-  end loop;
-end;
-$$;
-EOF
-```
+1. **Claude Code is the Executor, You are the Architect** - You define rules and knowledge, Claude Code follows them
+2. **Documents are the Interface** - Claude Code reads documents to understand how to behave
+3. **Summaries are Critical** - Always create/update summaries when modifying full documents
+4. **Examples are Test Cases** - Use examples/ to verify changes work correctly
 
-**Notes:**
-- Uses `CASCADE` for tables and views to handle dependencies.
-- The `RAISE NOTICE` prints each DROP statement before executing it, so you can see what was cleaned.
-- Excludes the `isOrContains` built-in function from being dropped.
-- Only drops SQL functions (identified by `function_definition ILIKE 'return%'`), not C++/Java UDx functions.
+### 1.4 Common Tasks
 
-### Testing Features Covered
+- **Modify docs**: Edit references/ → Update summary → Test with Claude Code
+- **Add features**: Create doc → Create summary → Update SKILL.md → Add examples
+- **Debug issues**: Check doc loading → Verify clarity → Test with examples
 
-All examples in this skill can be tested using VSQL:
+For detailed procedures and checklists, see [CONTRIBUTOR_GUIDE.md](CONTRIBUTOR_GUIDE.md).
 
-- **Basic SQL**: Table creation, data insertion, SELECT queries
-- **Analytic Functions**: Window functions, running totals, LAG/LEAD
-- **Function Mapping**: COALESCE (Oracle NVL equivalent), data type conversions
-- **Stored Procedures**: PL/vSQL procedures with proper exception handling
-- **Error Handling**: GET STACKED DIAGNOSTICS for error information retrieval
-- **Performance**: Projection creation with encoding strategies (RLE, DELTA, GZIP)
-- **Migration Examples**: Converted SQL from Oracle, DB2, SQL Server, PostgreSQL, MySQL
-- **Data Types**: Optimal type selection for Vertica's columnar storage
+---
 
+## Part 2: Project Architecture Overview
+
+### 2.1 Core Files
+
+| File | Target Audience | Core Purpose |
+|------|----------------|--------------|
+| **SKILL.md** | Claude Code Agent | Define workflow execution rules |
+| **CLAUDE.md** | Contributors/Maintainers | Explain project architecture for collaboration |
+| **README.md** | Users/Contributors | Introduce project features |
+
+### 2.2 Directory Structure
+
+See SKILL.md for complete directory listing with file descriptions.
+
+### 2.3 Key Principles
+
+1. **Progressive Disclosure**: Avoid context overload through layered document loading
+2. **Reference-Based Architecture**: Single source of truth with dependency hierarchy
+3. **Summary Documents**: Agent-optimized versions reduce context usage by ~70%
+
+---
+
+## Part 3: Documentation System
+
+### 3.1 Documentation Hierarchy
+
+See [Migration Guides Overview](references/migration-guides-overview.md) for complete hierarchy, dependencies, and usage instructions.
+
+### 3.2 Key Points
+
+- **Level 0**: Workflow definitions (generic-migration-guide.md is MANDATORY)
+- **Level 1**: Core references (sql-syntax, function-mapping, data-types) - standalone
+- **Level 2**: Database-specific guides (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
+- **Level 3**: Specialized references (stored-procedures, UDx, ML)
+- **Level 4**: Agent configurations (Multi-Agent Workflow only)
+- **Level 5**: Summary documents (Agent-optimized versions)
+
+### 3.3 Dependency Rules
+
+- Level 1 documents are standalone (foundational knowledge)
+- Level 2 references both Level 0 and Level 1
+- Level 3 documents are standalone but may reference Level 1
+- Level 5 documents MUST be synchronized with their parent documents
+- Level 4 documents ONLY apply to Multi-Agent Workflow
+
+---
+
+## Part 4: Workflow Architecture
+
+### 4.1 Two Workflows
+
+| Aspect | General Workflow | Multi-Agent Workflow |
+|--------|------------------|---------------------|
+| **Best For** | Small-medium migrations (<200 lines) | Large-scale migrations (>200 lines) |
+| **Agent Count** | 1 (Main Agent) | 4 (Manager + 3 sub-agents) |
+| **Context Usage** | Single context | Distributed contexts |
+
+See SKILL.md for detailed workflow selection and execution rules.
+
+### 4.2 Agent Responsibilities (Multi-Agent Workflow Only)
+
+| Agent | Role | Loads Migration Docs | Key Constraint |
+|-------|------|---------------------|----------------|
+| **Manager** | Coordinator | ❌ NEVER | Verifies results, never reads source files or migration refs |
+| **Requester** | File Reader | ❌ NEVER | Reads section-by-section (limit=50), exclusive file reader |
+| **Migrator** | Code Transformer | ✅ ONLY agent | Applies migration rules, unit tests before returning |
+| **Tester** | Validator | ❌ NEVER | Executes tests, never modifies code |
+
+### 4.3 Communication Protocol
+
+**Message Types**:
+- **READ_REQUEST** (Manager → Requester): Request file section
+- **READ_RESPONSE** (Requester → Manager): Return code snippet
+- **MIGRATION_TASK** (Manager → Migrator): Convert code
+- **TEST_REQUEST** (Manager → Tester): Validate functionality
+
+---
+
+## Part 5: Maintenance Guide
+
+### 5.1 Document Update Workflow
+
+1. **Identify Document Level** (0-5)
+2. **Make Changes** - Follow existing formatting, preserve cross-references
+3. **Synchronize Dependent Documents** - Level 0 → 1 → 2 → 5
+4. **Verify and Test** - Run link validation, test with examples
+
+For detailed synchronization checklists, see [CONTRIBUTOR_GUIDE.md](CONTRIBUTOR_GUIDE.md).
+
+### 5.2 Adding New Features
+
+1. Create reference document in references/
+2. Create corresponding summary in reference-summaries/
+3. Update migration-guides-overview.md (if Level 0-2)
+4. Add examples in examples/
+5. Test with Claude Code
+
+### 5.3 Key Maintenance Rules
+
+- **Level 0-2**: High impact, requires broad synchronization
+- **Level 3**: Medium impact, check dependencies
+- **Level 4**: Agent testing required
+- **Level 5**: Must sync with parent document
+
+For version control rules, branch naming, and detailed procedures, see [CONTRIBUTOR_GUIDE.md](CONTRIBUTOR_GUIDE.md).
+
+---
+
+## Part 6: Quick Reference
+
+### 6.1 Key Files
+
+**Migration starting point**:
+- references/generic-migration-guide.md
+
+**Core references**:
+- references/sql-syntax-reference.md
+- references/function-mapping.md
+- references/data-types.md
+
+**Database-specific**:
+- references/oracle-migration.md
+- references/db2-migration.md
+- references/sqlserver-migration.md
+- references/postgresql-migration.md
+- references/mysql-migration.md
+
+**Specialized topics**:
+- references/stored-procedures-guide.md
+- references/udx-development-guide.md
+- references/machine-learning.md
+
+**Agent configurations**:
+- agents/requester.md
+- agents/migrator.md
+- agents/tester.md
+
+**Detailed contributor guide**:
+- CONTRIBUTOR_GUIDE.md
+
+### 6.2 Documentation Priority
+
+1. **Generic Migration Guide** - MANDATORY for all migrations
+2. **OLTP to OLAP Rewrite Guide** - ESSENTIAL for procedural code
+3. **SQL Syntax Reference** - For syntax questions
+4. **Function Mapping** - For function replacement
+5. **Data Types** - For schema migration
+
+For complete file inventory, common tasks, and FAQ, see [CONTRIBUTOR_GUIDE.md](CONTRIBUTOR_GUIDE.md).
+
+---
+
+**Last Updated**: 2026-06-18
+**Version**: 1.0
+**Maintainer**: Vertica Expert Skill Contributors

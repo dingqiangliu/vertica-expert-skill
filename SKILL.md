@@ -18,8 +18,27 @@ This skill provides comprehensive guidance for migrating from other database sys
 - **The function mapping guides contain 100+ equivalents** - what seems "unsupported" is often just named differently
 - **Performance characteristics differ** - features may exist but work differently due to Vertica's columnar architecture
 - **Check all reference sections**: data types, function mapping, stored procedures, UDx development, and ML capabilities
+- **SEARCH before concluding unsupported**: When a loaded summary doesn't fully cover your scenario, use `grep -rn "keyword" references/ --include="*.md"` to search ALL reference files — the answer is often in a full document section or a different summary
+- **Full documents fill the gaps**: Summaries cover ~95% of scenarios. When a summary has the rules but not a complete example, load the relevant full document section with `Read offset=N limit=M` (NOT the entire file)
 
 **Remember: If you can't find a direct equivalent, it doesn't mean it doesn't exist - it means you need to dig deeper into the documentation.**
+
+## 🚫 GLOBAL PROHIBITION: NO FULL FILE READS FOR MIGRATION TASKS 🚫
+
+**⚠️ ABSOLUTE RULE ⚠️**
+
+**For ANY migration task (Oracle, DB2, SQL Server, PostgreSQL, MySQL → Vertica):**
+- **NEVER READ THE ENTIRE SOURCE FILE IN ONE GO** - this applies to ALL migration workflows
+- **NEVER LOAD FULL FILE CONTENT INTO CONTEXT** before understanding the scope
+
+**This rule applies BEFORE entering any migration workflow branch.**
+
+**Enforcement:**
+- If user says "migrate", "convert", "transform" + database name → this rule activates immediately
+- Violation = reading entire file content at once (instead of using grep for analysis or reading section by section)
+- Correct approaches:
+  - **General Migration Workflow**: Use grep to analyze, then read section by section
+  - **Multi-Agent Workflow**: Requester reads section by section (limit=50), never loads entire file
 
 ## Quick Reference
 
@@ -92,202 +111,267 @@ For optimizing existing queries:
 - Include current projection designs if available
 
 ### 7. Database Migration
-For migrating from other databases:
+
+**Getting Started:**
+
 - Identify source database type (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
 - Provide original SQL, procedures, or schema definitions
-- Specify any performance requirements
-- Include data volume and growth expectations
 
-#### When to Use Multi-Agent Migration Workflow
-**Use the Multi-Agent Migration Workflow when:**
-- ✅ More than 1 source file
-- ✅ Single source file exceeds 200 lines
-- ✅ Contains multiple stored procedures or functions
-- ✅ Single-agent mode frequently violates rules (reading entire files, skipping tests, etc.)
-- ✅ Large-scale migrations requiring strict context management
+> **⚠️ WORKFLOW SELECTION ⚠️**
+>
+> **Step 0: ANALYZE SOURCE FILES (MANDATORY - ALL WORKFLOWS)**
+>
+> Before entering ANY migration workflow, you MUST understand the scope:
+> ```bash
+> # Step 0a: Get file size (acceptable - metadata only)
+> wc -l source_file.sql  # Count lines to determine workflow
+>
+> # Step 0b: Identify object types (DO NOT READ CONTENT)
+> grep -n "CREATE" source_file.sql  # Find CREATE statements
+> grep -n "CURSOR\|LOOP\|FETCH" source_file.sql  # Find OLTP patterns
+> grep -n "INSERT\|UPDATE\|DELETE\|MERGE" source_file.sql  # Find DML types
+> ```
+>
+> **PURPOSE**: Determine WHICH WORKFLOW to use (General or Multi-Agent).
+>
+> **IMPORTANT**: Step 0 determines the WORKFLOW ONLY, NOT which documents to load.
+> - Document loading depends on your ROLE, not file content
+> - If you are Manager in Multi-Agent Workflow: Load ONLY multi-agent-migration-guide.md
+> - If you are in General Workflow: Load documents as specified in that section
+>
+> **ACCEPTABLE OUTPUT**:
+> - "File has 1000 lines → Use Multi-Agent Workflow (>200 lines)"
+> - "File has 150 lines → Use General Migration Workflow (<200 lines)"
+> - "File contains tables, views, and stored procedures"
+> - "File has cursor loops and row-by-row DML"
+> - "File contains INSERT, UPDATE, DELETE statements"
+>
+> **UNACCEPTABLE ACTIONS**:
+> - ❌ Reading the file with Read tool
+> - ❌ Loading file content into context
+> - ❌ Running `head`, `tail`, `cat`, or any command that displays file content
+> - ❌ Analyzing specific table structures or procedure logic
+> - ❌ Reading code or business logic
+>
+> **Default**: General Migration Workflow (Single-Agent) - for small files, simple migrations
+>
+> **Use Multi-Agent Workflow when**:
+> - Explicitly requested
+> - Files > 1 file OR single file > 200 lines
+>
 
-**Do NOT use Multi-Agent Migration Workflow when:**
-- ❌ Only 1 small file
-- ❌ Simple table structure migration
-- ❌ Quick syntax conversion tasks
+#### General Migration Workflow (Single-Agent)
 
-**Multi-Agent Migration Workflow Overview:**
-The Multi-Agent Migration Workflow uses four specialized agents to ensure rule adherence and prevent context overflow:
+**When to Use (Default for ALL migration tasks):**
+- **Default workflow** for any database migration task (unless explicitly asking for Multi-Agent)
+- Only 1 small file
+- Simple table structure migration
+- Quick syntax conversion tasks
+- Simple stored procedure or function migration
 
-1. **Manager Agent (Main Session)**: **BASIC PERSONALITY: Strict process controller and coordinator WITHOUT migration knowledge**. **INITIALIZES BACKGROUND AGENTS AT STARTUP (Requester, Migrator, Tester) — agents persist across multiple tasks, communicates via SendMessage**. Controls workflow coordination, determines source database type (as a fact), dispatches tasks to agents (**🚫 ONLY obtains source file content from Requester Agent** — never from any other source), **🔍 STRICTLY VERIFIES Migrator's unit test results** (checks unit test was performed, logs are complete, no anomalies exist; REJECTS and requires redo if verification fails), coordinates testing, **🔍 STRICTLY VERIFIES Tester's functional/integration test results** (checks tests were performed, logs are complete, no anomalies exist, no false positives like errors ignored but reported as PASS; REJECTS and requires redo if verification fails), appends to target file. **ONLY reminds Migrator to unit test, does NOT provide any other migration decisions, rules, or hints.** **🚫 ONLY creates Requester, Migrator, and Tester agents — no other agents allowed.** **🚫 NEVER provides migration transformation rules or decisions to Migrator — Manager has NO migration expertise.** **🚫 NEVER re-spawns agents for each task — use SendMessage to send tasks to existing background agents, only re-initialize if agent crashes or becomes unresponsive.**
-2. **Requester Agent (Sub-Agent)**: **Runs in BACKGROUND MODE** — initialized once, persists across multiple tasks, waits for tasks via SendMessage. Reads source files section-by-section (**EXCLUSIVE responsibility for file reading, NO migration knowledge**), **does NOT break objects or statements**, **groups consecutive DML statements on the same table**, **returns source code exactly as-is without any migration decisions or hints**, maintains file reading state across tasks
-3. **Migrator Agent (Sub-Agent)**: **Runs in BACKGROUND MODE** — initialized once, persists across multiple tasks, waits for tasks via SendMessage. Receives source database type from Manager (as a fact), **decides which reference documents to load** (basic docs at startup, additional docs on-demand based on code), performs code transformation, applies one-to-one migration and OLTP→OLAP rewrites, unit tests using pre-configured VSQL (do NOT probe or guess VSQL content), reports unit test status with complete logs, cleans up after unit test. **Maintains loaded reference documents across tasks — do NOT reload.**
-4. **Tester Agent (Sub-Agent)**: **Runs in BACKGROUND MODE** — initialized once, persists across multiple tasks, waits for tasks via SendMessage. Validates migrated code by executing it in a single VSQL call with autocommit enabled. Uses unified test method for all code: in one VSQL call, enable autocommit, execute code, verify no errors or warnings in logs, confirm data commits. Tests code as-is and reports failures honestly. Includes complete logs after each code snippet passes functional testing. Preserves all migrated objects during functional testing — only deletes test data or temporary objects added by Tester. **Clears test database and re-runs integration test from scratch after Migrator fixes** — when integration test fails and Migrator fixes the migration target files, Tester clears the entire test database and re-runs integration testing from scratch.
+**⚠️ CRITICAL EXECUTION ORDER ⚠️**
 
-**Key Principle:** The **Migrator Agent** receives source database type from Manager (as a fact), **decides which reference documents to load** - basic docs at startup (generic-migration-guide, sql-syntax-reference, function-mapping, data-types), source-specific guide based on source database type, and additional docs on-demand based on code being migrated (e.g., oltp-to-olap-rewrite-guide only when code contains stored procedures). **The Manager, Requester, and Tester agents NEVER read migration reference documents** — they only read the [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) to understand their roles and the workflow. This separation prevents context overflow and ensures clear role boundaries.
+**MUST** complete Step 0 (from workflow selection above) **BEFORE** proceeding.
 
-**Background Execution:** All agents (Requester, Migrator, Tester) run in **BACKGROUND MODE** — initialized once at startup, persist across multiple tasks, communicate with Manager via SendMessage. This eliminates repeated initialization overhead (skill loading, document loading, database connection). Manager monitors agent health and only re-initializes if agents crash or become unresponsive.
+**Process:**
+1. **Complete Step 0**: ANALYZE SOURCE FILES (MANDATORY - ALL WORKFLOWS) - see above
+2. **Load** basic reference documents at startup (from the vertica-expert skill):
+   - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md) - **MANDATORY**
+   - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
+   - [Function Mapping Guide](references/function-mapping.md)
+   - [Data Types](references/reference-summaries/data-types-summary.md)
+   - Source-specific Migration Guide (based on source database type, from the vertica-expert skill):
+     - [Oracle Migration Guide](references/reference-summaries/oracle-migration-summary.md)
+     - [DB2 Migration Guide](references/reference-summaries/db2-migration-summary.md)
+     - [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md)
+     - [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md)
+     - [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md)
+3. **Load additional documents on-demand** (only when needed, from the vertica-expert skill):
+   - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) — ONLY for stored procedures or adjacent single-row DML
+   - [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md) — ONLY for stored procedures
+   - [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md) — ONLY for user-defined SQL functions
+4. **When stuck on a migration problem** (per HIGHEST PRIORITY REMINDER):
+   a. **Search all references**: `grep -rn "keyword" references/ --include="*.md"` — finds answers with zero context cost
+   b. **If found in a summary**: read that section of the summary
+   c. **If found in a full doc**: locate section via `grep -n "^## \|^### " references/<doc>.md`, then load ONLY that section with `Read offset=N limit=M`
+   d. **If NOT found anywhere**: test in VSQL to verify whether the feature is truly unsupported
+   e. **NEVER give up after checking only one document** — the HIGHEST PRIORITY REMINDER says dig deeper
+5. **Read** source files section by section (ONLY after steps 1-4 are complete)
+6. **Convert** code following generic migration requirements:
+   - One-to-one mapping: tables→tables, views→views, procedures→procedures
+   - Rewrite OLTP→OLAP patterns (cursors, row-by-row DML)
+   - Preserve ALL logic — never simplify or remove code
+7. **Test** each object immediately using single VSQL call with `SET SESSION AUTOCOMMIT TO ON;`
+8. **Append** migrated code to target file after test passes
+9. **Repeat** for each object: READ → IDENTIFY → MIGRATE → TEST → PASS → APPEND
+10. **Clean up** test environment **ONLY AFTER** all source files have been processed
 
-**Benefits:**
+**Key Rules:**
+- Keep code intact — NEVER split procedures, functions, or statements
+- **DO NOT DROP** migrated objects or data after individual testing — subsequent migrations may depend on them
+- Use single $VSQL call with `SET SESSION AUTOCOMMIT TO ON;`
+- Check COMPLETE logs (NOTICE, WARNING, ERROR, row counts, return values)
+- Process files in alphabetical order, objects in source order (never reorder)
+- Report test status with complete logs when tests pass
 
-- ✅ Manager maintains workflow discipline without migration context overload
-- ✅ Migrator focuses solely on code transformation with basic reference docs loaded at startup and additional docs loaded on-demand
-- ✅ Tester provides independent verification of migrated code
-- ✅ Each agent has smaller, focused context window
-- ✅ Easier to debug and restart specific components
-- ✅ **Agents persist across multiple tasks — no repeated initialization overhead**
+#### Multi-Agent Migration Workflow
 
-**Reference Documentation (for Manager, Requester, and Tester - from vertica-expert skill):**
-- [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) - Complete architecture, workflow details, and implementation templates
+**When to Use:**
+- Source files > 1 file OR single file > 200 lines
+- Large-scale migrations requiring strict context management
 
-**🚫 Manager, Requester, and Tester NEVER load these documents** (Migrator Agent only):
-- [Generic Migration Guide](references/generic-migration-guide.md)
-- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)
-- Database-specific migration guides (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
-- [SQL Syntax Reference](references/sql-syntax-reference.md)
-- [Function Mapping Guide](references/function-mapping.md)
-- [Data Types](references/data-types.md)
-- [Stored Procedures Guide](references/stored-procedures-guide.md)
-- [User-Defined SQL Functions Development Guide](references/user-defined-sql-functions-guide.md)
+**⚠️ CRITICAL: If you are not clear about your role, you are the Manager agent.**
 
-**Quick Start:**
-To start a multi-agent migration, provide:
-1. Source database type (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
-2. Source files list (in dependency order)
-3. Target file path
-4. Vertica test database connection information (VSQL environment variable encapsulating connection parameters)
+**Process:**
+1. **Confirm** your role (DO NOT SKIP) - answer this question BEFORE doing anything else:
+   - Are you coordinating the workflow and verifying results? → **STOP HERE, you are Manager**
+   - Are you reading source files section-by-section? → You are Requester
+   - Are you transforming code and unit testing? → You are Migrator
+   - Are you validating migrated code? → You are Tester
+   - **If you cannot clearly identify as Requester/Migrator/Tester, you MUST be Manager**
 
-The Manager Agent will:
-1. Read **ONLY** the [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md)
-2. **NOT read migration reference documents** (Generic Migration Guide, OLTP/OLAP Rewrite, database-specific guides)
-3. List migration requirements
-4. Wait for user confirmation
-5. **Initialize Requester, Migrator, and Tester agents ONCE in BACKGROUND MODE** — agents persist across multiple tasks, communicate via SendMessage
-6. Execute two-phase migration cycle:
+2. **Analyze** source files (MANAGER ONLY):
+   - **Manager**: Complete the shared Step 0 above to determine workflow and documents
+   - **Subagents**: DO NOT analyze source files - your config files will be auto-initialized
+3. **Read** the Multi-Agent Migration Guide:
+   - **Manager**: Read [references/multi-agent-migration-guide.md](references/multi-agent-migration-guide.md) BEFORE spawning any subagents
+   - **Subagents**: Your config files are auto-initialized; do NOT read other agents' configs
+4. **Commit** to Multi-Agent Workflow (MANAGER ONLY):
+   - **Manager**: Once you start Multi-Agent Workflow, you MUST continue with it
+   - **NEVER switch to General Migration Workflow** when subagents seem unreliable
+   - **Follow Agent Lifecycle Management**: Wait → Retry → Re-initialize → Resume
+   - **Direct execution in main session WILL cause context overflow and rule violations**
+   - **SAVE STATE after EVERY task** - Save critical state to `manager_state.md` (in current working directory) after each interaction with any agent. Do NOT wait for compaction.
 
-   **Phase 1: Migration & Functional Testing**
-   Manager SENDMESSAGE to requester_agent → Requester READS source file (offset=N, limit=50) → RETURNS code snippet → Manager SENDMESSAGE to migrator_agent (with current_schema) → Migrator decides which reference documents to load → Migrator unit tests (up to 10 attempts) → **MANAGER VERIFIES UNIT TEST** → RECEIVE migrated code → Manager SENDMESSAGE to tester_agent (with current_schema) → FUNCTIONAL TEST (single VSQL call: enable autocommit, execute code, verify) → **MANAGER VERIFIES TEST RESULTS** → IF PASS → APPEND → IF FAIL → Manager SENDMESSAGE to migrator_agent to fix → RETEST
+**Your Identity (Manager):**
+- Role: Coordinator
+- Responsibility: Manage workflow and verify results
+- **NO migration knowledge** (by design)
+- **NEVER switch to General Migration Workflow** - When subagents are unreliable, follow Agent Lifecycle Management (wait → retry → re-initialize → resume). NEVER execute migration tasks directly in main session.
+- **SAVE STATE after EVERY task** - Save critical state to `manager_state.md` (in current working directory) after each interaction with any agent. Do NOT wait for compaction.
 
-   **Phase 2: Integration Testing (after ALL code migrated)**
-   Manager SENDMESSAGE to tester_agent: Clear test database completely → Execute ALL migrated files → Run integration test → **MANAGER VERIFIES INTEGRATION TEST** → IF PASS → Migration complete → IF FAIL → Tester reports failures with complete logs → Manager SENDMESSAGE to migrator_agent with error info and ALL migration target files → Migrator analyzes errors and fixes issues → After unit tests pass, Manager SENDMESSAGE to tester_agent to clear test database and re-run integration test → Repeat until integration test passes
+---
 
-#### Multi-Agent Migration Workflow (Recommended for Large Migrations)
-**When to use:**
-- Source files > 1 file OR
-- Single file > 200 lines OR
-- Multiple stored procedures/functions OR
-- Single-agent approach has demonstrated context overflow issues
+**Workflow Overview:**
+1. Manager coordinates workflow and verifies results
+2. Requester reads source files section-by-section
+3. Migrator transforms code and unit tests
+4. Tester validates functionality
 
-**Architecture:**
-- **Manager Agent** (main session): **BASIC PERSONALITY: Strict process controller and coordinator WITHOUT migration knowledge**. **INITIALIZES BACKGROUND AGENTS AT STARTUP — agents persist across multiple tasks, communicates via SendMessage**. Controls workflow coordination, dispatches tasks, coordinates testing (**🚫 ONLY obtains source file content from Requester Agent** — never from any other source, **🚫 NEVER reads migration reference documents** — delegated to Migrator Agent, **🚫 ONLY creates Requester, Migrator, and Tester agents** — no other agents allowed, **🚫 NEVER provides migration transformation rules or decisions to Migrator** — Manager has NO migration expertise — see [Complete Migration Requirement](references/generic-migration-guide.md#1-complete-migration-requirement), [Sequential Processing Requirement](references/generic-migration-guide.md#2-sequential-processing-requirement), [Object Integrity Requirement](references/generic-migration-guide.md#3-object-integrity-requirement)), **🚫 NEVER re-spawns agents for each task — use SendMessage to send tasks to existing background agents**)
-- **Requester Agent** (sub-agent): **Runs in BACKGROUND MODE** — initialized once, persists across multiple tasks, waits for tasks via SendMessage. Reads source files section-by-section (**EXCLUSIVE responsibility for file reading**), identifies complete objects, maintains file reading state across tasks
-- **Migrator Agent** (sub-agent): **Runs in BACKGROUND MODE** — initialized once, persists across multiple tasks, waits for tasks via SendMessage. Loads basic reference docs at startup, loads additional docs on-demand, performs code transformation and unit test using pre-configured VSQL (do NOT probe or guess VSQL content). **Reports unit test status** — includes complete output logs when tests pass. **Cleans up after unit test** — deletes all migrated objects, test data, and temporary objects after unit testing to avoid affecting subsequent functional tests. **Maintains loaded reference documents across tasks — do NOT reload.**
-- **Tester Agent** (sub-agent): **Runs in BACKGROUND MODE** — initialized once, persists across multiple tasks, waits for tasks via SendMessage. Independently tests migrated code using pre-configured VSQL (do NOT probe or guess VSQL content), provides pass/fail feedback. **Does NOT modify Manager's code** — tests code as-is and reports failures honestly. **Includes complete logs** — after each code snippet passes functional testing, includes the complete output logs from VSQL. **Preserves all migrated objects** during functional testing — only deletes test data or temporary objects added by Tester. **Clears test database and re-runs integration test from scratch after Migrator fixes** — when integration test fails and Migrator fixes the migration target files, Tester clears the entire test database and re-runs integration testing from scratch.
+**Agent Responsibilities (each agent reads ONLY its own documents):**
 
-**Benefits:**
-- Prevents context overflow (each agent has focused context)
-- Enforces sequential processing rules (Requester specializes in file reading)
-- Ensures every object is tested (dedicated Tester Agent)
-- Loads reference documents once (Migrator Agent initialization)
-- Clear separation of concerns (Manager coordinates, Requester reads, Migrator transforms, Tester validates)
+| Agent | Role | Reads | Does NOT Read | State |
+|-------|------|-------|---------------|-------|
+| **Manager** | Coordinator | [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) | Migration docs, source files, subagent configs | **Stateful - saves state after EVERY task** |
+| **Requester** | File Reader | [agents/requester.md](agents/requester.md) (auto-initialized) | Migration docs, other configs | Stateless |
+| **Migrator** | Code Transformer | [agents/migrator.md](agents/migrator.md) + migration docs (auto-initialized) | Source files, other configs | Stateless |
+| **Tester** | Validator | [agents/tester.md](agents/tester.md) (auto-initialized) | Migration docs, source files, other configs | Stateless |
 
-**Reference:** [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md)
+**Migrator's Migration Documents (Migrator ONLY, from the vertica-expert skill):**
+
+- **Load at Startup:**
+  - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md) - **MANDATORY**
+  - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
+  - [Function Mapping Guide](references/function-mapping.md)
+  - [Data Types](references/reference-summaries/data-types-summary.md)
+  - Source-specific Migration Guide:
+    - [Oracle Migration Guide](references/reference-summaries/oracle-migration-summary.md)
+    - [DB2 Migration Guide](references/reference-summaries/db2-migration-summary.md)
+    - [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md)
+    - [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md)
+    - [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md)
+
+- **Load On-Demand:**
+  - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) — ONLY for stored procedures or adjacent single-row DML
+  - [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md) — ONLY for stored procedures
+  - [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md) — ONLY for user-defined SQL functions
+
+**Two-Phase Migration Cycle:**
+- **Phase 1**: Requester READS → Migrator TRANSFORMS + unit tests → **MANAGER VERIFIES** → Tester FUNCTIONAL TESTS → **MANAGER VERIFIES** → APPEND (or fix loop)
+- **Phase 2**: Tester CLEARS database → EXECUTES all files → INTEGRATION TEST → **MANAGER VERIFIES** → Complete (or fix loop)
+
+**Manager State Management:**
+- **Manager saves state after EVERY task** - Save critical state to `manager_state.md` (in current working directory) after each interaction with any agent
+- **Do NOT wait for compaction** - Proactively save state to prevent context loss
+- **Subagents are stateless** - They do NOT need to save state; Manager handles all state management
+
+**Self-Awareness Check (MANDATORY for Manager)**
+
+If you are the Manager, answer these questions BEFORE proceeding. This is a hard requirement to ensure role clarity:
+
+  **Q1: What is your role?**
+  > "I am the Manager agent. My role is to coordinate the workflow and verify results."
+  
+  **Q2: What are your responsibilities?**
+  > "My responsibilities are:
+  > - Coordinate workflow and distribute tasks to subagents
+  > - Verify test results from Migrator and Tester
+  > - Save state to manager_state.md after every task
+  > - NEVER read source files or make migration decisions"
+  
+  **Q3: What are you FORBIDDEN from doing?**
+  > "I am forbidden from:
+  > - Reading source files (that's Requester's job)
+  > - Making migration decisions or transforming code (that's Migrator's job)
+  > - Loading migration reference documents (generic-migration-guide, sql-syntax, function-mapping, data-types, oracle-migration, etc.)
+  > - Reading ANY file in references/ or reference-summaries/ EXCEPT multi-agent-migration-guide.md"
+  
+  **Q4: What is the ONLY reference document you should read?**
+  > "I should ONLY read: multi-agent-migration-guide.md"
+
+**If you cannot answer all 4 questions correctly, STOP and re-read the Multi-Agent Migration Workflow section.**
+
+#### Quick Start
+Provide: (1) Source database type, (2) Source files list, (3) Target file path
 
 ## Core Reference Sections
 
-### 🚨 MANDATORY: Generic Migration Requirements (Migrator Agent ONLY)
-- [Generic Migration Guide](references/generic-migration-guide.md) - **MANDATORY READING** for Migrator Agent
+### Migration Reference Documents
+
+**Generic Migration (MANDATORY for all migrations):**
+- [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md) - **MANDATORY READING** - Complete migration requirements, sequential processing, object integrity
 - [Migration Guides Overview](references/migration-guides-overview.md) - Guide hierarchy and usage instructions
 
-### 🔄 OLTP to OLAP Rewrite (ESSENTIAL for Migrator Agent ONLY)
-- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) - **ESSENTIAL** for Migrator Agent. Contains 5 rewrite patterns (adjacent DML merging, loop-DML→set-based SQL, cursor→window functions, function-call→join, recursive CTE) with before/after examples and a migration checklist.
+**Database-Specific Migration:**
+- [Oracle Migration Guide](references/reference-summaries/oracle-migration-summary.md) - Oracle PL/SQL to PL/vSQL
+- [DB2 Migration Guide](references/reference-summaries/db2-migration-summary.md) - DB2 to Vertica
+- [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md) - T-SQL to Vertica SQL
+- [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md) - PL/pgSQL to PL/vSQL
+- [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md) - MySQL to Vertica
 
-### 🤖 Multi-Agent Migration Workflow (ALL Agents)
-**For Manager, Requester, and Tester:**
-- [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) - Architecture, workflow details, and implementation templates
+**OLTP to OLAP Rewrite:**
+- [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) - **ESSENTIAL** for stored procedures  or adjacent single-row DML. Contains 5 rewrite patterns with before/after examples
 
-**🚫 Manager, Requester, and Tester NEVER load these documents:**
-- [Generic Migration Guide](references/generic-migration-guide.md) (Migrator's responsibility)
-- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md) (Migrator's responsibility)
-- Database-specific migration guides (Migrator's responsibility)
+### SQL Development Reference
 
-### SQL Syntax and Development
-- [SQL Syntax Reference](references/sql-syntax-reference.md) - Comprehensive Vertica SQL syntax
-- [Data Types](references/data-types.md) - Data type mapping and optimization
+- [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md) - Comprehensive Vertica SQL syntax
+- [Data Types](references/reference-summaries/data-types-summary.md) - Data type mapping and optimization
 - [Function Mapping Guide](references/function-mapping.md) - Function conversion across databases
 
-### User-Defined SQL Functions and Programming
+### Programming Reference
 
-- [User-Defined SQL Functions Development Guide](references/user-defined-sql-functions-guide.md) - Custom function development in pure SQL
+**Stored Procedures:**
+- [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md) - PL/vSQL development
 
-### Stored Procedures and Programming
-
-- [Stored Procedures Guide](references/stored-procedures-guide.md) - PL/vSQL development
-
-### User-Defined Functions and Programming
-
+**User-Defined Functions:**
+- [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md) - Custom function development in pure SQL
 - [UDx Development Guide](references/udx-development-guide.md) - Custom function development in C++, Python, Java or R
 
-### Machine Learning and Data Science
+### Machine Learning and Optimization
+
 - [Machine Learning Guide](references/machine-learning.md) - In-database ML algorithms and workflows
 - [ML Function Mapping](references/ml-function-mapping.md) - Cross-database ML function equivalents
-
-### Performance and Optimization
 - [Query Optimization](references/query-optimization.md) - Performance tuning strategies
-
-### Migration and Conversion (All Follow Generic Migration Requirements)
-**Single-Agent Migration:**
-- [Oracle to Vertica](references/oracle-migration.md) - Oracle migration following generic requirements
-- [DB2 to Vertica](references/db2-migration.md) - DB2 migration following generic requirements
-- [SQL Server to Vertica](references/sqlserver-migration.md) - SQL Server migration following generic requirements
-- [PostgreSQL to Vertica](references/postgresql-migration.md) - PostgreSQL migration following generic requirements
-- [MySQL to Vertica](references/mysql-migration.md) - MySQL migration following generic requirements
-
-**Multi-Agent Migration Workflow (ALL Agents):**
-- [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) - Architecture, workflow details, and implementation templates
-
-**🚫 These documents are ONLY loaded by Migrator Agent, NOT by Manager/Requester/Tester:**
-- [Generic Migration Guide](references/generic-migration-guide.md)
-- [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)
-- Database-specific migration guides
-- [SQL Syntax Reference](references/sql-syntax-reference.md)
-- [Function Mapping Guide](references/function-mapping.md)
-- [Data Types](references/data-types.md)
-- [Stored Procedures Guide](references/stored-procedures-guide.md)
-- [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md)
 
 ## Examples
 
-### Example 1: Vertica SQL Development
-**Input**: Need to create a complex analytical query for customer segmentation
-**Output**: Optimized SQL using analytic functions, proper JOINs, and projection recommendations
-
-### Example 2: PL/vSQL Stored Procedure Development
-**Input**: Business requirement for automated monthly reporting with error handling
-**Output**: Complete PL/vSQL procedure with transaction management, logging, and exception handling
-
-### Example 3: Custom UDx Development
-**Input**: Need for a custom aggregate function to calculate weighted averages
-**Output**: C++ UDx implementation with factory class, performance optimization, and usage examples
-
-### Example 4: Machine Learning Implementation
-**Input**: Customer churn prediction using historical data
-**Output**: Complete ML pipeline with data preparation, XGBoost model training, evaluation, and deployment
-
-### Example 5: Database Migration (Single-Agent)
-**Input**: Oracle PL/SQL stored procedure for calculating customer lifetime value
-**Output**: Converted Vertica PL/vSQL procedure with performance optimizations and best practices
-
-### Example 6: Database Migration (Multi-Agent Workflow)
-**Input**: Large Oracle database with 10+ source files, multiple stored procedures, views, and tables
-**Output**: Complete migration using Multi-Agent Workflow:
-1. Requester Agent reads source files section-by-section in alphabetical order
-2. Manager coordinates workflow and dispatches objects to Migrator Agent
-3. Migrator Agent transforms each object with basic reference docs loaded at startup and additional docs loaded on-demand
-4. Tester Agent validates each migration in test environment
-5. Manager appends passing objects to target file
-6. Final integration test and migration report
-
-**Process**: REQUEST → Requester READS → IDENTIFY → DISPATCH to Migrator → RECEIVE migrated code → TEST via Tester Agent → PASS → APPEND → REPEAT
-
-### Example 7: Performance Optimization
-**Input**: Slow SQL Server query with multiple joins taking 2+ minutes
-**Output**: Optimized Vertica query with projection design, encoding strategies, and monitoring recommendations
+1. **Vertica SQL Development**: Analytic queries with proper JOINs and projection recommendations
+2. **PL/vSQL Stored Procedures**: Transaction management, logging, and exception handling
+3. **Custom UDx Development**: C++ implementations with factory classes and performance optimization
+4. **Machine Learning**: Data preparation, XGBoost model training, evaluation, and deployment
+5. **Single-Agent Migration**: Oracle PL/SQL to Vertica PL/vSQL conversion
+6. **Multi-Agent Migration**: Large-scale migration with coordinated agent workflow
+7. **Performance Optimization**: Projection design, encoding strategies, and monitoring
 
 ## Best Practices
 
@@ -298,29 +382,28 @@ The Manager Agent will:
 4. **Test Incrementally**: Migrate and test in small batches
 5. **Monitor Performance**: Use system tables to track query performance
 
-### Multi-Agent Migration Best Practices
-1. **Use for Large Migrations**: Apply multi-agent workflow when source files > 1 or single file > 200 lines
-2. **Manager Controls Flow**: Manager coordinates workflow and testing, dispatches tasks to Requester and Migrator agents, and coordinates testing via Tester Agent
-3. **Requester Reads Source Files**: Requester Agent reads source files section-by-section using Read(offset=N, limit=50), ensuring compliance with [Complete Migration Requirement](references/generic-migration-guide.md#1-complete-migration-requirement), [Sequential Processing Requirement](references/generic-migration-guide.md#2-sequential-processing-requirement), and [Object Integrity Requirement](references/generic-migration-guide.md#3-object-integrity-requirement)
-4. **Migrator Loads Reference Docs**: Migrator Agent loads basic reference documents at startup (Generic Migration Guide, SQL Syntax Reference, Function Mapping, Data Types, source-specific guide) and additional documents on-demand based on code being migrated
-5. **Migrator Uses Pre-configured VSQL**: Migrator Agent uses the VSQL environment variable directly for unit testing — do NOT probe, inspect, or guess VSQL content
-6. **Migrator Reports Unit Test Status**: After each code snippet migration, Migrator reports whether it passed unit testing and includes complete output logs (NOTICE, WARNING, ERROR, row counts, etc.) when tests pass
-7. **Migrator Cleans Up After Unit Test**: After completing unit testing, Migrator deletes all migrated objects, test data, and temporary objects to avoid affecting subsequent functional tests
-8. **Manager, Requester, and Tester Load Minimal Docs**: These agents **NEVER read migration reference documents** (Generic Migration Guide, OLTP/OLAP Rewrite, database-specific guides). They only read the [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md). Only Migrator Agent loads migration reference documents.
-9. **Tester Uses Pre-configured VSQL**: Tester Agent uses the VSQL environment variable directly for testing — do NOT probe, inspect, or guess VSQL content
-10. **Tester Does NOT Modify Manager's Code**: Tester Agent tests the code as-is — do NOT modify test code just to make it pass. Test rules must be strictly followed. Report failures honestly with detailed error messages.
-11. **Tester Includes Complete Logs**: After each code snippet passes functional testing, Tester includes the complete output logs from VSQL (NOTICE, WARNING, ERROR messages, row counts, affected rows, return values, and any diagnostic information).
-12. **Tester Preserves Migrated Objects**: During functional testing, do NOT delete schemas, tables, views, functions, procedures, sequences, or migrated data. These are dependencies for subsequent migrations. Only delete test data or temporary objects added by Tester.
-13. **Tester Validates Everything**: Tester Agent tests every object, no skipping
-14. **Fix Loop**: If test fails, Migrator fixes and Manager retests (up to 3 attempts)
-15. **Document Failures**: Append failed migrations with detailed error documentation
-16. **Integration Test Fix Workflow**: When integration test fails: (1) Tester reports failures with complete logs to Manager, (2) Manager forwards error info and ALL migration target files to Migrator, (3) Migrator analyzes errors and fixes issues on relevant target files and runs unit tests, (4) Manager instructs Tester to clear test database and re-run integration test from scratch
-17. **Maintain Order**: Process files in alphabetical order, objects in source order
-18. **Focused Responsibilities**: Each agent has focused responsibilities - Manager coordinates, Requester reads, Migrator transforms, Tester validates.
-19. **Manager Verifies Migrator Unit Test**: Manager STRICTLY verifies Migrator's unit test results before accepting code. Checks: (1) unit test was actually performed, (2) logs are complete (NOTICE, WARNING, ERROR, row counts, return values), (3) no anomalies in logs. If verification fails, Manager REJECTS and requires Migrator to redo.
-20. **Manager Verifies Tester Test Results**: Manager STRICTLY verifies Tester's functional/integration test results before appending to target file. Checks: (1) tests were actually performed, (2) logs are complete, (3) no WARNING or ERROR anomalies in logs, (4) no false positives (errors or warnings ignored but reported as PASS). If verification fails, Manager REJECTS and requires Tester to redo.
-21. **Schema Prefix Compliance**: Migrator maintains `current_schema` context variable, updates it when encountering `USE dbname` statements, and returns it with migrated code. Manager saves this value and passes it to new Migrator instances when restarting.
-22. **Background Agent Execution**: All agents (Requester, Migrator, Tester) run in **BACKGROUND MODE** — initialized once at startup, persist across multiple tasks, communicate with Manager via SendMessage. This eliminates repeated initialization overhead (skill loading, document loading, database connection). Manager monitors agent health and only re-initializes if agents crash or become unresponsive.
+### Multi-Agent Migration Workflow Best Practices
+
+**When to Use:**
+- Source files > 1 file OR single file > 200 lines
+- Single-agent approach has demonstrated context overflow
+
+**Key Principles:**
+- Manager coordinates, Requester reads, Migrator transforms, Tester validates
+- Migrator loads basic docs at startup, additional docs on-demand
+- All agents use single VSQL call with `SET SESSION AUTOCOMMIT TO ON;`
+- Manager strictly verifies all test results before proceeding
+
+**Critical Rules:**
+- Migrator unit tests every object and includes complete logs
+- Tester tests code as-is, never modifies it
+- Manager verifies unit tests (logs complete, no anomalies) and functional tests (no errors/warnings, no false positives)
+- Migrator cleans up after unit test; Tester preserves migrated objects during functional test
+- Tester clears database and re-runs integration test from scratch after fixes
+- Process files in alphabetical order, objects in source order
+- Fix loop: up to 3 attempts, then document and append with warnings
+
+**For complete details:** See [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md)
 
 ### Machine Learning Best Practices
 1. **Data Quality**: Ensure clean, properly formatted training data
@@ -341,6 +424,14 @@ The Manager Agent will:
 This skill provides comprehensive reference documentation and examples for all Vertica development and migration tasks.
 
 ## Troubleshooting
+
+### Problem-Solving Strategy (When Stuck)
+
+When a migration step fails and the loaded documents don't resolve it:
+1. **Search**: `grep -rn "keyword" references/ --include="*.md"` across all reference files
+2. **Targeted load**: Use `grep -n "^## \|^### "` to find section line numbers, then `Read offset=N limit=M`
+3. **Verify**: Test the solution in VSQL before applying to the migration
+4. **Document**: Note which document/section solved the issue for future reference
 
 ### Common Migration Issues
 - **Data Type Mismatches**: Check type compatibility and use explicit casting
@@ -384,129 +475,124 @@ All SQL examples and stored procedures in this skill can be tested using the VSQ
 
 ### VSQL Testing Setup
 
-The environment variable `VSQL` has been set already, which contains the vsql connection parameters. You can leverage VSQL to run SQL immediately.
+The environment variable `$VSQL` has been set already, which contains the vsql connection parameters. You can leverage $VSQL to run SQL immediately.
 
-**Important Autocommit Behavior**: By default, vsql has **autocommit OFF** for interactive sessions. For testing, either:
+**Important Autocommit Behavior**: By default, vsql has **autocommit OFF** for interactive sessions, meaning you must explicitly COMMIT transactions for data modifications to persist. This is different from client libraries which have autocommit ON by default.
 
-- Enable autocommit: `SET SESSION AUTOCOMMIT TO ON;`
-- Include explicit COMMIT statements after data modifications
+To enable autocommit in vsql (recommended for testing):
+```sql
+SET SESSION AUTOCOMMIT TO ON;
+```
+
+To disable autocommit (vsql default behavior):
+```sql
+SET SESSION AUTOCOMMIT TO OFF;
+```
 
 **Important Session Behavior**: Each `$VSQL -c` command creates a new session. For data persistence across multiple commands, either:
 
 1. Use explicit COMMIT statements in DML commands, or
 2. Use here document syntax for multi-statement transactions
 
-#### **Checking Object Availability:**
-
-- Schema: `$VSQL -c "\dn schema_name"`
-- Table: `$VSQL -c "\dt table_name"`
-- View: `$VSQL -c "\dt view_name"`
-- Projection: `$VSQL -c "\dj projection_name"`
-- Function: `$VSQL -c "\df function_name"`
-
-**Additional VSQL Options:**
-
-- Run SQL file: `$VSQL -f script.sql`
-- Interactive mode: `$VSQL`
-- Enable timing: `$VSQL -i`
-
-### VSQL Testing Methods
-
-#### Method 1: Individual Commands with Explicit COMMIT
-
+**Quick Test Pattern:**
 ```bash
-# Test connectivity
-$VSQL -c "SELECT VERSION(), CURRENT_DATE, USER;"
-
-# Test table creation
-$VSQL -c "CREATE TABLE test_migration (id INTEGER, name VARCHAR(50));"
-
-# Test data insertion with explicit COMMIT
-$VSQL -c "INSERT INTO test_migration VALUES (1, 'test'); COMMIT;"
-
-# Test data retrieval
-$VSQL -c "SELECT * FROM test_migration;"
-
-# Clean up
-$VSQL -c "DROP TABLE test_migration CASCADE;"
-```
-
-#### Method 2: Multi-Statement Transaction (Recommended)
-
-```bash
-# Test complete workflow in single session
 $VSQL<<-'EOF'
 SET SESSION AUTOCOMMIT TO ON;
+-- Your SQL here
+EOF
+```
 
-# Test table creation
-CREATE TABLE test_migration (id INTEGER, name VARCHAR(50));
+**Key Rules:**
+- Use single $VSQL call with `SET SESSION AUTOCOMMIT TO ON;`
+- For multi-statement transactions, use here document syntax (avoids escaping `$` and `"`)
+- Enable autocommit for testing: `SET SESSION AUTOCOMMIT TO ON;`
 
-# Test data insertion
-INSERT INTO test_migration VALUES (1, 'test');
+**Common VSQL Commands:**
+```bash
+# Check object availability
+$VSQL -c "\dn schema_name"      # Schema
+$VSQL -c "\dt table_name"      # Table
+$VSQL -c "\dt view_name"       # View
+$VSQL -c "\dj projection_name"  # Projection
+$VSQL -c "\df function_name"   # Function
 
-# Test data retrieval
-SELECT * FROM test_migration;
+# Run SQL file
+$VSQL -f script.sql
 
-# Clean up
-DROP TABLE test_migration CASCADE;
+# Interactive mode
+$VSQL
+
+# Enable timing
+$VSQL -i
+```
+
+**Testing Methods:**
+
+```bash
+# Method 1: Individual commands with explicit COMMIT
+$VSQL -c "CREATE TABLE test (id INTEGER, name VARCHAR(50));"
+$VSQL -c "INSERT INTO test VALUES (1, 'example'); COMMIT;"
+$VSQL -c "SELECT * FROM test;"
+$VSQL -c "DROP TABLE test CASCADE;"
+
+# Method 2: Multi-statement transaction (Recommended)
+$VSQL<<-'EOF'
+SET SESSION AUTOCOMMIT TO ON;
+CREATE TABLE test (id INTEGER, name VARCHAR(50));
+INSERT INTO test VALUES (1, 'example');
+SELECT * FROM test;
+DROP TABLE test CASCADE;
 EOF
 
 # Test stored procedures
 $VSQL<<-'EOF'
-CREATE OR REPLACE PROCEDURE test_migration_proc() AS $$
+CREATE OR REPLACE PROCEDURE test_proc() AS $$
 BEGIN
-    RAISE NOTICE 'Migration test successful';
+    RAISE NOTICE 'Test successful';
 END;
 $$
 EOF
-
-# Call procedure
-$VSQL -c "CALL test_migration_proc();"
-
-# Clean up procedure
-$VSQL -c "DROP PROCEDURE test_migration_proc();"
+$VSQL -c "CALL test_proc();"
+$VSQL -c "DROP PROCEDURE test_proc();"
 ```
 
-**Key Benefits of Here Document Syntax:**
-- Avoid escaping special characters like `$` and `"`
-- Maintain SQL code formatting and readability
-- Ideal for stored procedures with `$$` delimiters
-- Allows multiple statements in a single session
-- Autocommit settings persist across all statements
+**VSQL Options:**
+- Run SQL file: `$VSQL -f script.sql`
+- Enable timing: `$VSQL -i`
 
-### Clean Test Database
+
+### Clean Test Database (REQUIRED for Tester subagent)
 
 Use this PL/vSQL anonymous block to drop all user-created objects (procedures, functions, views, tables, sequences). Excludes system schemas.
 
 ```bash
 $VSQL<<-'EOF'
-do $$
-declare sql varchar;
-begin
-  for sql in query
+DO $$
+DECLARE sql varchar;
+BEGIN
+  FOR sql IN QUERY
     -- drop all user stored procedures
-    select 'drop procedure if exists '||schema_name||'.'||procedure_name||'('|| procedure_arguments||');' as sql from user_procedures where schema_name not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    union all
+    SELECT 'DROP PROCEDURE IF EXISTS '||schema_name||'.'||procedure_name||'('|| procedure_arguments||');' as sql FROM user_procedures WHERE schema_name NOT IN ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
+    UNION ALL
     -- drop all user SQL functions
-    select 'drop function if exists '||schema_name||'.'||function_name||'('||function_argument_type||');' from user_functions where schema_name not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog') and function_name not in ('isOrContains') and  function_definition ilike 'return%'
-    union all
+    SELECT 'DROP FUNCTION IF EXISTS '||schema_name||'.'||function_name||'('||function_argument_type||');' FROM user_functions WHERE schema_name NOT IN ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog') and function_name NOT IN ('isOrContains') and  function_definition ilike 'return%'
+    UNION ALL
     -- drop all user views
-    select 'drop view if exists '||table_schema||'.'||table_name||' cascade;' from views where table_schema not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    union all
+    SELECT 'DROP VIEW IF EXISTS '||table_schema||'.'||table_name||' CASCADE;' FROM views WHERE table_schema NOT IN ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
+    UNION ALL
     -- drop all user tables
-    select 'drop table if exists '||table_schema||'.'||table_name||' cascade;' from tables where table_schema not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
-    union all
+    SELECT 'DROP TABLE IF EXISTS '||table_schema||'.'||table_name||' CASCADE;' FROM tables WHERE table_schema NOT IN ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
+    UNION ALL
     -- drop all user sequences
-    select 'drop sequence if exists '||sequence_schema||'.'||sequence_name||';' from sequences where sequence_schema not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
+    SELECT 'DROP SEQUENCE IF EXISTS '||sequence_schema||'.'||sequence_name||';' FROM sequences WHERE sequence_schema NOT IN ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog')
     -- drop all user schemas
-    union all
-    select 'drop schema if exists '||schema_name||';' from schemata where schema_name not in ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog', 'public')
-    
-  loop
-    raise notice '%', sql;
-    perform execute sql;
-  end loop;
-end;
+    UNION ALL
+    SELECT 'DROP SCHEMA IF EXISTS '||schema_name||';' FROM schemata WHERE schema_name NOT IN ('v_internal', 'v_catalog', 'v_monitor', 'v_secret_managers', 'v_internal_tables', 'v_func','v_txtindex','pg_catalog', 'public')
+  LOOP
+    RAISE NOTICE '%', sql;
+    PERFORM EXECUTE sql;
+  END LOOP;
+END;
 $$;
 EOF
 ```
@@ -517,13 +603,3 @@ EOF
 - `RAISE NOTICE` prints each DROP statement before execution.
 - Excludes the `isOrContains` built-in function.
 - Only drops SQL functions (identified by `function_definition ILIKE 'return%'`), not C++/Java UDx functions.
-
-## Version Compatibility
-
-This skill covers Vertica versions 9.x through 24.x, with specific notes for:
-- **Eon Mode** features and considerations
-- **New function additions** in recent versions
-- **Deprecated features** and migration paths
-- **Performance improvements** in newer releases
-
-For specific version-related questions, always specify your Vertica version for the most accurate guidance.

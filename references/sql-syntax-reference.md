@@ -1135,7 +1135,7 @@ FROM source_table;
 - Cannot add projections to a non-empty temp table with `ON COMMIT PRESERVE ROWS`
 - Temp table data is **not visible** through system/virtual tables
 - `ALTER TABLE` (ADD/DROP/RENAME COLUMN, SET SCHEMA) is not supported
-- `SELECT FOR UPDATE` is not allowed
+- `SELECT FOR UPDATE` is not allowed on temp tables ONLY
 - Partitioning is not supported
 
 ### JOIN Types

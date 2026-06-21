@@ -432,6 +432,14 @@ In PL/vSQL, the PERFORM command is used to **discard the output** produced by SQ
 - **DDL** (CREATE, ALTER, DROP, etc.), **COMMIT**, **ROLLBACK**, and other statements → outputs success/failure messages
 - **EXECUTE** (dynamic SQL inside stored procedures) → can execute any of the above dynamic statements, producing the corresponding output (row counts, `Tuples`/`Tuple`, or status messages)
 
+**Why errors occur**: PL/vSQL does not have a "standalone SQL statement" syntax. Every embedded SQL must appear in one of two positions: on the right-hand side of an assignment (`var := SQL`), or after `PERFORM` (`PERFORM SQL`). When a SQL keyword appears in any other position, the parser interprets it as an identifier (variable name) and expects an assignment operator, producing:
+
+```
+syntax error, unexpected <keyword>, expecting := or <-
+```
+
+**Resolution** — two syntactic positions for embedded SQL:
+
 If the output is not captured via one of the following assignment forms, `PERFORM` must be prepended to discard it:
 
 | Capture Form | Example |

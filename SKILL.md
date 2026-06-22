@@ -242,6 +242,8 @@ For optimizing existing queries:
    - **Follow Agent Lifecycle Management**: Wait → Retry → Re-initialize → Resume
    - **Direct execution in main session WILL cause context overflow and rule violations**
    - **SAVE STATE after EVERY task** - Save critical state to `manager_state.md` (in current working directory) after each interaction with any agent. Do NOT wait for compaction.
+   - **🚨 If subagent reports Fatal API Error (output token limit exceeded, context overflow, agent crash)**: Re-initialize agent immediately. Do NOT retry old agent. Do NOT attempt the task yourself. Spawn fresh agent → send same task → continue.
+   - **If subagent reports Temporary API Error (timeout, HTTP 500)**: Retry up to 3 times with same agent, then re-initialize if still failing.
 
 **Your Identity (Manager):**
 - Role: Coordinator

@@ -466,6 +466,23 @@ If Manager's context is lost (compaction):
 - ❌ **NEVER take shortcuts or bypass rules** - Strict compliance is the only path to quality and speed.
 - ❌ **NEVER switch to General Migration Workflow** - When subagents are unreliable, follow Agent Lifecycle Management (re-initialize, restart). NEVER execute migration tasks directly in main session. This will cause context overflow and rule violations.
 
+#### Self-Check: Am I About to Overstep? (MANDATORY before taking action after agent failure)
+
+When an agent fails and you feel the urge to intervene, answer these questions HONESTLY:
+
+1. "Am I about to read the source code to understand why the agent failed?" → If YES, **STOP**
+2. "Am I thinking 'a new agent will also fail because...'?" → If YES, **STOP**
+3. "Am I about to write or prepare migration code myself?" → If YES, **STOP**
+4. "Am I thinking 'I'll just handle this one case directly'?" → If YES, **STOP**
+5. "Am I analyzing the root cause of the failure?" → If YES, **STOP**
+
+If ANY answer is YES, you are about to overstep. The ONLY correct action is:
+- **Fatal API Error** → re-initialize agent immediately
+- **Logic Error** → retry (up to 3 times) → re-initialize → retry again
+- **After exhausting retries** → escalate to user
+
+**Do NOT analyze WHY the agent failed. Do NOT predict whether re-initialization will work. Just follow the procedure.**
+
 
 #### Initialization Steps
 
@@ -974,11 +991,26 @@ Migrated Code:
 - Inconsistent or illogical responses
 - Agent process terminated unexpectedly
 
+**🚨 Fatal API Errors (Agent is DEAD — must re-initialize immediately):**
+- "Claude's response exceeded the output token maximum" / output token limit exceeded
+- Context overflow / agent ran out of context window
+- Agent process crash / terminated / unresponsive
+
+**Fatal Error = automatic re-initialize. Do NOT retry the same agent. Do NOT attempt the task yourself.**
+
+**Temporary API Errors (transient — retry with same agent):**
+- Connection timeout / network errors
+- HTTP 500 / service unavailable
+- Generic "API Error" without clear cause
+
+**Temporary Error = retry up to 3 times, then re-initialize if still failing.**
+
 ### Re-initialization Policy
 
 **Remember:** Subagents are stateless - re-initialization spawns a fresh instance.
 
 **When to Re-initialize Agents:**
+- ✅ **Fatal API Error** (output token limit exceeded, context overflow, agent crash) — agent is DEAD, MUST re-initialize immediately
 - ✅ Agent crashes or becomes unresponsive
 - ✅ Agent returns errors indicating internal issues
 - ✅ Major workflow restart (e.g., after significant errors)
@@ -988,6 +1020,9 @@ Migrated Code:
 - ❌ When test fails (agents remain valid)
 - ❌ For minor issues (retry with same agent)
 - ❌ Just because agent seems slow (wait longer before re-initializing)
+- ❌ Temporary API errors (connection timeout, HTTP 500) — retry up to 3 times first, then re-initialize
+
+**CRITICAL: Fatal API Error (token limit, context overflow) is NOT a retry situation. Dead agents cannot recover. Re-initialize immediately.**
 
 ### Re-initialization Procedure
 
@@ -1018,12 +1053,23 @@ Reason: Migration completed successfully
 ### Error Recovery
 
 **If Agent Fails During Task:**
-1. Log the failure with timestamp and context
-2. Determine if task can be retried
-3. If agent crashed, re-initialize (spawn fresh instance) and retry task
-4. If agent is busy, wait and retry later
-5. If multiple retries fail, escalate to user
-6. **SAVE STATE after recovery** - After any error recovery, save state to `manager_state.md` (in current working directory)
+
+**Fatal API Error (output token limit exceeded, context overflow, agent crash):**
+1. Re-initialize agent immediately (spawn fresh instance) — do NOT retry old agent
+2. Send same task to new agent
+3. **SAVE STATE after recovery** — save new agent ID to `manager_state.md` (in current working directory)
+4. Manager MUST NOT read source code, judge task difficulty, or attempt the task
+
+**Temporary API Error (connection timeout, HTTP 500, generic API error):**
+1. Retry up to 3 times with same agent
+2. If still failing, re-initialize agent (spawn fresh instance) and retry
+3. **SAVE STATE after recovery** — save state to `manager_state.md` (in current working directory)
+
+**Logic Error (test failure, wrong output, rule violation):**
+1. Retry up to 3 times with additional error context
+2. If still failing, re-initialize agent (spawn fresh instance)
+3. If multiple retries fail, escalate to user
+4. **SAVE STATE after recovery** — save state to `manager_state.md` (in current working directory)
 
 **Recovery Checklist:**
 - [ ] Agent process restarted successfully (fresh stateless instance)

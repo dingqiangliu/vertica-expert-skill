@@ -608,9 +608,7 @@ After EVERY interaction with any agent, save critical state to `manager_state.md
 
 ### Requester Agent Initialization
 
-**Spawn Requester Agent using formal agent configuration:**
-
-The Requester Agent is defined in [agents/requester.md](../agents/requester.md) with a proper system prompt that persists across context compression.
+**Spawn Requester Agent using pre-configured subagent_type "vertica_expert_requester":**
 
 **🚨 CRITICAL RULES FOR MANAGER:**
 - **DO NOT include source file path in initialization message** - Requester will receive file paths in subsequent READ_REQUEST tasks
@@ -641,9 +639,7 @@ SendMessage(
 
 ### Migrator Agent Initialization
 
-**Spawn Migrator Agent using formal agent configuration:**
-
-The Migrator Agent is defined in [agents/migrator.md](../agents/migrator.md) with a proper system prompt that persists across context compression. It has the `vertica-expert` skill pre-loaded.
+**Spawn Migrator Agent using pre-configured subagent_type "vertica_expert_migrator":**
 
 **Initialization Steps:**
 ```python
@@ -668,9 +664,7 @@ SendMessage(
 
 ### Tester Agent Initialization
 
-**Spawn Tester Agent using formal agent configuration:**
-
-The Tester Agent is defined in [agents/tester.md](../agents/tester.md) with a proper system prompt that persists across context compression. It has the `vertica-expert` skill pre-loaded.
+**Spawn Tester Agent using pre-configured subagent_type "vertica_expert_tester":**
 
 **Initialization Steps:**
 ```python
@@ -1032,7 +1026,7 @@ Migrated Code:
 3. Note: Manager will provide all necessary context in subsequent requests
 
 **Special Considerations:**
-- **Migrator**: Must reload "Load at Startup" documents (defined in agents/migrator.md), then load additional docs on-demand as needed
+- **Migrator**: Must reload "Load at Startup" documents, then load additional docs on-demand as needed
 - **Requester/Tester**: Completely stateless, no special considerations needed
 
 ### Graceful Shutdown

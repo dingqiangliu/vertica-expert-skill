@@ -265,9 +265,9 @@ For optimizing existing queries:
 | Agent | Role | Reads | Does NOT Read | State |
 |-------|------|-------|---------------|-------|
 | **Manager** | Coordinator | [Multi-Agent Migration Guide](references/multi-agent-migration-guide.md) | Migration docs, source files, subagent configs | **Stateful - saves state after EVERY task** |
-| **Requester** | File Reader | [agents/requester.md](agents/requester.md) (auto-initialized) | Migration docs, other configs | Stateless |
-| **Migrator** | Code Transformer | [agents/migrator.md](agents/migrator.md) + migration docs (auto-initialized) | Source files, other configs | Stateless |
-| **Tester** | Validator | [agents/tester.md](agents/tester.md) (auto-initialized) | Migration docs, source files, other configs | Stateless |
+| **Requester** | File Reader | | Migration docs, other configs | Stateless |
+| **Migrator** | Code Transformer | migration docs | Source files, other configs | Stateless |
+| **Tester** | Validator | | Migration docs, source files, other configs | Stateless |
 
 **Migrator's Migration Documents (Migrator ONLY, from the vertica-expert skill):**
 

@@ -263,7 +263,7 @@ Document:
 | 3 | **Source-specific migration guide** | Database-specific syntax |
 | 4 | **SQL Syntax Reference** | Syntax questions |
 | 5 | **Function Mapping Guide** | Function conversion |
-| 6 | **Data Types Guide** | Type conversion |
+| 6 | **Data Type Mapping Guide** | Type mapping and optimization |
 | 7 | **User-Defined SQL Functions Guide** | SQL function development |
 | 8 | **Stored Procedures Guide** | PL/vSQL development |
 | 9 | **UDx Development Guide** | C++/Python/Java/R functions |
@@ -276,7 +276,7 @@ Document:
 | Problem | Solution |
 |---------|----------|
 | OUT/INOUT keywords removed | Always preserve parameter modes exactly |
-| Data type mismatches | Use Data Types Guide for proper mapping |
+| Data type mismatches | Use Data Type Mapping Guide for proper mapping |
 | Function not found | Use Function Mapping Guide or create custom function |
 | Syntax errors / OLTP patterns remaining | Reference SQL Syntax / OLTP to OLAP Rewrite Guide |
 | Dependency order issues | Maintain exact source file order — never reorder |

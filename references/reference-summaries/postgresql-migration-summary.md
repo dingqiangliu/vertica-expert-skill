@@ -93,65 +93,15 @@ FROM (WITH cte AS (SELECT * FROM employees) SELECT * FROM cte) t;
 
 ---
 
-## Data Type Mapping: PostgreSQL → Vertica
+## Data Type Mapping
 
-### Numeric Types (⚠️ Note storage size differences)
+> **See [Data Type Mapping Guide](../data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
-| PostgreSQL | Vertica | Size Difference | Notes |
-|------------|---------|-----------------|-------|
-| `SMALLINT` | `SMALLINT` | 2→8 bytes | Vertica uses 8 bytes uniformly |
-| `INTEGER` | `INTEGER` | 4→8 bytes | Vertica uses 8 bytes uniformly |
-| `BIGINT` | `BIGINT` | 8 bytes | Same |
-| `NUMERIC(p,s)` | `NUMERIC(p,s)` | Same | Precision preserved |
-| `DECIMAL(p,s)` | `NUMERIC(p,s)` | Same | Alias mapping |
-| `REAL` | `REAL` | 4→8 bytes | Vertica uses 8 bytes uniformly |
-| `DOUBLE PRECISION` | `DOUBLE PRECISION` | 8 bytes | Same |
-| `FLOAT` | `DOUBLE PRECISION` | Same | Alias mapping |
-| `SERIAL` | `IDENTITY` | - | Auto-increment integer |
-| `BIGSERIAL` | `IDENTITY` | - | Auto-increment bigint |
+## Function Conversions
 
-### Character Types
-
-| PostgreSQL | Vertica | Notes |
-|------------|---------|-------|
-| `VARCHAR(n)` | `VARCHAR(n)` | Max 65000 |
-| `CHAR(n)` | `CHAR(n)` | Fixed length |
-| `TEXT` | `LONG VARCHAR` | Max 32MB |
-| `NAME` | `VARCHAR(64)` | PostgreSQL internal type |
-
-### Date/Time Types
-
-| PostgreSQL | Vertica | Notes |
-|------------|---------|-------|
-| `DATE` | `DATE` | Same |
-| `TIME` | `TIME` | Same |
-| `TIMESTAMP` | `TIMESTAMP` | Same |
-| `TIMESTAMPTZ` | `TIMESTAMPTZ` | Store as UTC |
-| `INTERVAL` | `INTERVAL` | Same |
-
-### Binary & Other Types
-
-| PostgreSQL | Vertica | Notes |
-|------------|---------|-------|
-| `BYTEA` | `LONG VARBINARY` | Max 32MB |
-| `BOOLEAN` | `BOOLEAN` | Same |
-| `UUID` | `VARCHAR(36)` | Store as string |
-| `JSON` | `LONG VARCHAR` | Store as text |
-| `JSONB` | `LONG VARBINARY` | Store as binary |
-| `ARRAY` | `ARRAY` | Same |
-| `INET` | `VARCHAR(45)` | Store as string |
-| `CIDR` | `VARCHAR(49)` | Store as string |
-| `MACADDR` | `VARCHAR(17)` | Store as string |
-| `XML` | `LONG VARCHAR` | Store as text |
-| `POINT` | `GEOMETRY` | Convert to spatial type |
-| `LINE` | `GEOMETRY` | Convert to spatial type |
-| `POLYGON` | `GEOMETRY` | Convert to spatial type |
-
-### Special Functions
-
-| PostgreSQL | Vertica | Notes |
-|------------|---------|-------|
-| `GENERATE_SERIES()` | `GENERATE_SERIES()` | Requires pgcompat package |
+> **See [Function Mapping Guide](../function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -325,46 +275,6 @@ EXCEPTION WHEN OTHERS THEN
 
 ---
 
-## Common PostgreSQL Functions → Vertica
-
-| PostgreSQL | Vertica | Notes |
-|------------|---------|-------|
-| `COALESCE(a, b)` | `COALESCE(a, b)` | Direct mapping |
-| `NULLIF(a, b)` | `NULLIF(a, b)` | Direct mapping |
-| `GREATEST(a, b)` | `GREATEST(a, b)` | Direct mapping |
-| `LEAST(a, b)` | `LEAST(a, b)` | Direct mapping |
-| `CURRENT_DATE` | `CURRENT_DATE` | Direct mapping |
-| `CURRENT_TIME` | `CURRENT_TIME` | Direct mapping |
-| `CURRENT_TIMESTAMP` | `CURRENT_TIMESTAMP` | Direct mapping |
-| `NOW()` | `CURRENT_TIMESTAMP` | Direct replacement |
-| `AGE(d)` | Custom | No direct equivalent |
-| `EXTRACT(YEAR FROM d)` | `EXTRACT(YEAR FROM d)` | Direct mapping |
-| `DATE_TRUNC('month', d)` | `DATE_TRUNC('month', d)` | Direct mapping |
-| `TO_CHAR(d, fmt)` | `TO_CHAR(d, fmt)` | Direct mapping |
-| `TO_DATE(str, fmt)` | `TO_DATE(str, fmt)` | Direct mapping |
-| `TO_TIMESTAMP(str, fmt)` | `TO_TIMESTAMP(str, fmt)` | Direct mapping |
-| `LENGTH(str)` | `LENGTH(str)` | Direct mapping |
-| `SUBSTRING(str FROM n FOR m)` | `SUBSTR(str, n, m)` | Different syntax |
-| `POSITION(sub IN str)` | `INSTR(str, sub)` | Different function |
-| `CONCAT(a, b)` | `CONCAT(a, b)` or `a || b` | Direct mapping |
-| `UPPER(str)` | `UPPER(str)` | Direct mapping |
-| `LOWER(str)` | `LOWER(str)` | Direct mapping |
-| `TRIM(str)` | `TRIM(str)` | Direct mapping |
-| `BTRIM(str)` | `TRIM(str)` | Different function |
-| `LTRIM(str)` | `LTRIM(str)` | Direct mapping |
-| `RTRIM(str)` | `RTRIM(str)` | Direct mapping |
-| `REPLACE(str, old, new)` | `REPLACE(str, old, new)` | Direct mapping |
-| `REVERSE(str)` | `REVERSE(str)` | Direct mapping |
-| `REPEAT(str, n)` | `REPEAT(str, n)` | Direct mapping |
-| `LPAD(str, n, pad)` | `LPAD(str, n, pad)` | Direct mapping |
-| `RPAD(str, n, pad)` | `RPAD(str, n, pad)` | Direct mapping |
-| `STRING_AGG(col, ',')` | `LISTAGG(col, ',')` | Different function |
-| `ARRAY_AGG(col)` | Custom | No direct equivalent |
-| `JSON_BUILD_OBJECT(...)` | Custom | No direct equivalent |
-| `JSON_AGG(col)` | Custom | No direct equivalent |
-
----
-
 ## Function Migration Strategies
 
 ### Strategy Selection Guide
@@ -429,110 +339,6 @@ v_count, v_avg, v_max := CALL get_dept_stats(10);
 - [ ] Check if convertible to set operations
 - [ ] Verify NULL handling matches
 - [ ] Test performance
-
----
-
-## Array Handling
-
-| PostgreSQL | Vertica |
-|-----------|---------|
-| `TEXT[]` | `ARRAY[VARCHAR(50)]` |
-| `SELECT id, UNNEST(tags) AS tag FROM test_arrays` | `SELECT id, tag FROM test_arrays, UNNEST(tags) AS tag` |
-
-**Note**: Vertica requires `UNNEST` in FROM clause (JOIN), not SELECT clause.
-
----
-
-## JSON Handling
-
-### PostgreSQL → Vertica Flex Table Mapping
-
-| PostgreSQL | Vertica Flex Table |
-|------------|-------------------|
-| `data->>'name'` | `"name"` (virtual column) |
-| `(data->>'age')::INTEGER` | `"age"::INT` |
-| `data @> '{"key":"value"}'` | `MAPLOOKUP(__raw__, 'key') = 'value'` |
-| `data IS NOT NULL` | `__raw__ IS NOT NULL` |
-
-### 3-Step Flex Table Migration
-
-**Step 1**: Create flex table
-```sql
-CREATE FLEX TABLE json_events();  -- Pure flex
-CREATE FLEX TABLE json_events(event_type VARCHAR);  -- Hybrid (materialized columns)
-```
-
-**Step 2**: Load JSON data
-```sql
-COPY json_events FROM '/data/events.json' PARSER fjsonparser();
-```
-
-**Step 3**: Build view & query virtual columns
-```sql
-SELECT compute_flextable_keys_and_build_view('json_events');
-SELECT "user.name", "event_type" FROM json_events WHERE "created_at"::TIMESTAMP > '2024-01-01';
-```
-
-**Optional**: Materialize frequently queried columns for better performance
-```sql
-SELECT MATERIALIZE_FLEXTABLE_COLUMNS('json_events');
-```
-
----
-
-## Index & Constraint Migration
-
-| Constraint | PostgreSQL | Vertica |
-|-----------|-----------|---------|
-| Primary Key | `emp_id SERIAL PRIMARY KEY` | `emp_id IDENTITY PRIMARY KEY` |
-| Foreign Key | `REFERENCES orders(id) ON DELETE CASCADE` | `REFERENCES orders(id)` (comment out CASCADE) |
-| Unique | `product_code VARCHAR(50) UNIQUE` | Same |
-| Check | `salary NUMERIC(10,2) CHECK (salary > 0)` | Same |
-
-**ON DELETE CASCADE**: Not supported; use stored procedures or application logic instead.
-
-**PostgreSQL Hints**: Comment out hints (Vertica ignores them)
-```sql
-SELECT /* IndexScan(employees emp_dept_idx) */ * FROM employees WHERE dept_id = 10;
-```
-
----
-
-## Full-Text Search Migration
-
-### PostgreSQL → Vertica Text Index Mapping
-
-| PostgreSQL | Vertica Text Index |
-|------------|-------------------|
-| `to_tsvector('english', content) @@ to_tsquery('english', 'term')` | `id IN (SELECT doc_id FROM idx WHERE token = v_txtindex.StemmerCaseInsensitive('term'))` |
-| `to_tsquery('english', 'search & term')` (AND) | Two `IN (...)` subqueries joined with `AND` |
-| `to_tsquery('english', 'search \| term')` (OR) | Two `IN (...)` subqueries joined with `OR` |
-| `to_tsquery('english', '!exclude')` (NOT) | `NOT (id IN (...))` |
-
-### Stemmer Comparison
-
-| Feature | PostgreSQL | Vertica |
-|---------|-----------|---------|
-| Stemming algorithm | Language-specific dictionaries | Porter stemming algorithm |
-| Case-insensitive | `to_tsvector('english', ...)` | `v_txtindex.StemmerCaseInsensitive` (default) |
-| Case-sensitive | Not built-in | `v_txtindex.StemmerCaseSensitive` |
-| No stemming | `to_tsvector('simple', ...)` | `STEMMER NONE` |
-
-### 2-Step Migration
-
-**Step 1**: Create text index
-```sql
-CREATE TEXT INDEX articles_text_idx ON articles (id, content);
-```
-
-**Step 2**: Query text index
-```sql
-SELECT * FROM articles
-WHERE id IN (SELECT doc_id FROM articles_text_idx
-             WHERE token = v_txtindex.StemmerCaseInsensitive('search term'));
-```
-
-**Prerequisites**: Source table must have primary key; projection sorted and segmented by that key.
 
 ---
 

@@ -179,7 +179,7 @@ For optimizing existing queries:
    - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md) - **MANDATORY**
    - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
    - [Function Mapping Guide](references/function-mapping.md)
-   - [Data Types](references/reference-summaries/data-types-summary.md)
+   - [Data Type Mapping Guide](references/data-type-mapping.md)
    - Source-specific Migration Guide (based on source database type, from the vertica-expert skill):
      - [Oracle Migration Guide](references/reference-summaries/oracle-migration-summary.md)
      - [DB2 Migration Guide](references/reference-summaries/db2-migration-summary.md)
@@ -275,7 +275,7 @@ For optimizing existing queries:
   - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md) - **MANDATORY**
   - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
   - [Function Mapping Guide](references/function-mapping.md)
-  - [Data Types](references/reference-summaries/data-types-summary.md)
+  - [Data Type Mapping Guide](references/data-type-mapping.md)
   - Source-specific Migration Guide:
     - [Oracle Migration Guide](references/reference-summaries/oracle-migration-summary.md)
     - [DB2 Migration Guide](references/reference-summaries/db2-migration-summary.md)
@@ -315,7 +315,7 @@ If you are the Manager, answer these questions BEFORE proceeding. This is a hard
   > "I am forbidden from:
   > - Reading source files (that's Requester's job)
   > - Making migration decisions or transforming code (that's Migrator's job)
-  > - Loading migration reference documents (generic-migration-guide, sql-syntax, function-mapping, data-types, oracle-migration, etc.)
+  > - Loading migration reference documents (generic-migration-guide, sql-syntax, function-mapping, data-type-mapping, oracle-migration, etc.)
   > - Reading ANY file in references/ or reference-summaries/ EXCEPT multi-agent-migration-guide.md"
   
   **Q4: What is the ONLY reference document you should read?**
@@ -347,7 +347,7 @@ Provide: (1) Source database type, (2) Source files list, (3) Target file path
 ### SQL Development Reference
 
 - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md) - Comprehensive Vertica SQL syntax
-- [Data Types](references/reference-summaries/data-types-summary.md) - Data type mapping and optimization
+- [Data Type Mapping Guide](references/data-type-mapping.md) - Data type mapping and optimization
 - [Function Mapping Guide](references/function-mapping.md) - Function conversion across databases
 
 ### Programming Reference

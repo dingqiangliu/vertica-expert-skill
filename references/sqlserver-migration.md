@@ -142,47 +142,13 @@ CREATE VIEW CRM.v_customer_orders AS  -- CRM schema prefix from USE [CRM]
 
 ## Data Type Mappings
 
-### Numeric Types
+> **See [Data Type Mapping Guide](data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
-| SQL Server Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| TINYINT | TINYINT | `INT`, `INTEGER`, `INT8`, `SMALLINT`, `TINYINT`, and `BIGINT` are all synonyms for the same signed 64-bit integer data type in Vertica |
-| SMALLINT | SMALLINT | **8 bytes** in Vertica (2-byte integer in SQL Server) |
-| INT | INTEGER | **8 bytes** in Vertica (4-byte integer in SQL Server) |
-| BIGINT | BIGINT | 8-byte integer |
-| DECIMAL(p,s) | NUMERIC(p,s) | Fixed precision decimal |
-| FLOAT | DOUBLE PRECISION | 8-byte floating point |
-| REAL | REAL | 4-byte floating point |
+## Function Conversions
 
-### Character Types
-
-| SQL Server Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| CHAR(n) | CHAR(n) | Fixed-length character |
-| VARCHAR(n) | VARCHAR(n) | Variable-length character |
-| VARCHAR(MAX) | LONG VARCHAR | Large text data |
-| TEXT | LONG VARCHAR | Deprecated, use LONG VARCHAR |
-| NCHAR(n) | CHAR(n) | Unicode, use CHAR in Vertica |
-| NVARCHAR(n) | VARCHAR(n) | Unicode, use VARCHAR in Vertica |
-
-### Date/Time Types
-
-| SQL Server Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| DATE | DATE | Date only |
-| TIME | TIME | Time only |
-| DATETIME | TIMESTAMP | Date and time |
-| DATETIME2 | TIMESTAMP | High precision timestamp |
-| SMALLDATETIME | TIMESTAMP | Lower precision timestamp |
-
-### Binary Types
-
-| SQL Server Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| BINARY(n) | BINARY(n) | Fixed-length binary |
-| VARBINARY(n) | VARBINARY(n) | Variable-length binary |
-| VARBINARY(MAX) | LONG VARBINARY | Large binary data |
-| IMAGE | LONG VARBINARY | Deprecated, use LONG VARBINARY |
+> **See [Function Mapping Guide](function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ## SQL Syntax Conversion
 
@@ -213,56 +179,6 @@ WHERE e.dept_id = d.dept_id;
 SELECT * FROM employees e
 JOIN departments d ON e.dept_id = d.dept_id
 LIMIT 10;
-```
-### Common Functions
-
-| SQL Server Function | Vertica Equivalent | Notes |
-|---------------------|-------------------|-------|
-| GETDATE() | GETDATE(), or NOW() , SYSDATE() | Current date/time |
-| DATEADD(unit, n, date) | date + INTERVAL 'n' unit | Date arithmetic |
-| DATEDIFF(unit, start, end) | EXTRACT(unit FROM end - start) | Date difference |
-| ISNULL(value, replacement) | ISNULL(value, replacement), or COALESCE(value, replacement) | NULL handling |
-| LEN(string) | LENGTH(string) | String length |
-| SUBSTRING(string, start, length) | SUBSTRING(string, start, length), or SUBSTRING(string FROM start FOR length) | Substring extraction |
-| CHARINDEX(substr, string) | INSTR(string, substr), or POSITION(substr IN string) | Find substring |
-| UPPER(string) | UPPER(string) | Convert to uppercase |
-| LOWER(string) | LOWER(string) | Convert to lowercase |
-| REPLACE(string, old, new) | REPLACE(string, old, new) | String replacement |
-| CONVERT(type, value) | CAST(value AS type) | Type conversion |
-
-### String Concatenation
-
-```sql
--- SQL Server (multiple options)
-SELECT first_name + ' ' + last_name as full_name FROM employees;
-SELECT CONCAT(first_name, ' ', last_name) as full_name FROM employees;
-
--- Vertica (use || operator or CONCAT)
-SELECT first_name || ' ' || last_name as full_name FROM employees;
-SELECT CONCAT(first_name, CONCAT(' ', last_name)) as full_name FROM employees;
-```
-
-### Date Functions
-
-```sql
--- SQL Server
-SELECT DATEADD(month, 6, hire_date)
-FROM employees;
-
--- Vertica
-SELECT GETDATE(), ADD_MONTHS(hire_date, 6)
-FROM employees;
-```
-
-### NULL Handling
-
-```sql
--- SQL Server
-SELECT ISNULL(middle_name, 'N/A') FROM employees;
-
--- Vertica (both ISNULL and COALESCE are supported; COALESCE is ANSI standard and preferred)
-SELECT ISNULL(middle_name, 'N/A') FROM employees;
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
 ```
 
 ## Stored Procedure Migration

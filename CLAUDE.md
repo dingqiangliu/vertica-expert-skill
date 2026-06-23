@@ -82,7 +82,7 @@ See [Migration Guides Overview](references/migration-guides-overview.md) for com
 ### 3.2 Key Points
 
 - **Level 0**: Workflow definitions (generic-migration-guide.md is MANDATORY)
-- **Level 1**: Core references (sql-syntax, function-mapping, data-types) - standalone
+- **Level 1**: Core references (sql-syntax, function-mapping, data-type-mapping) - standalone
 - **Level 2**: Database-specific guides (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
 - **Level 3**: Specialized references (stored-procedures, UDx, ML)
 - **Level 4**: Agent configurations (Multi-Agent Workflow only)
@@ -169,7 +169,7 @@ For version control rules, branch naming, and detailed procedures, see [CONTRIBU
 **Core references**:
 - references/sql-syntax-reference.md
 - references/function-mapping.md
-- references/data-types.md
+- references/data-type-mapping.md
 
 **Database-specific**:
 - references/oracle-migration.md

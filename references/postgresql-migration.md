@@ -23,7 +23,7 @@ This PostgreSQL migration guide **MUST BE USED IN CONJUNCTION WITH** the [Generi
 2. **[OLTP to OLAP Rewrite Guide](oltp-to-olap-rewrite-guide.md)** - **ESSENTIAL** for ALL PostgreSQL migrations (cursors, loops, row-by-row processing)
 3. **[SQL Syntax Reference](sql-syntax-reference.md)** - Comprehensive Vertica SQL syntax
 4. **[Function Mapping Guide](function-mapping.md)** - Function conversion across databases
-5. **[Data Types](data-types.md)** - Data type mapping and optimization
+5. **[Data Type Mapping Guide](data-type-mapping.md)** - Data type mapping and optimization
 6. **[User-Defined SQL Functions Development Guide](user-defined-sql-functions-guide.md)** - Custom SQL functions development
 7. **[Stored Procedures Guide](stored-procedures-guide.md)** - PL/vSQL stored procedures development
 8. **[UDx Development Guide](udx-development-guide.md)** - Custom functions including SQL functions development
@@ -44,35 +44,6 @@ JOIN departments d ON e.dept_id = d.dept_id
 LIMIT 10;
 ```
 
-### String Concatenation
-
-```sql
--- PostgreSQL (multiple options)
-SELECT first_name || ' ' || last_name as full_name FROM employees;
-SELECT CONCAT(first_name, ' ', last_name) as full_name FROM employees;
-SELECT FORMAT('%s %s', first_name, last_name) as full_name FROM employees;
-
--- Vertica (use || operator or CONCAT)
-SELECT first_name || ' ' || last_name as full_name FROM employees;
-SELECT CONCAT(first_name, CONCAT(' ', last_name)) as full_name FROM employees;
-```
-
-### Date Functions
-
-```sql
--- PostgreSQL
-SELECT CURRENT_TIMESTAMP, hire_date + INTERVAL '6 months'
-FROM employees;
-
--- Vertica (same syntax)
-SELECT CURRENT_TIMESTAMP, hire_date + INTERVAL '6 months'
-FROM employees;
-
--- Vertica (use functions)
-SELECT NOW(), ADD_MONTHS(hire_date, 6)
-FROM employees;
-```
-
 ### Auto-increment Columns
 
 ```sql
@@ -87,18 +58,6 @@ CREATE TABLE employees (
     emp_id IDENTITY PRIMARY KEY,
     emp_name VARCHAR(100)
 );
-```
-
-### NULL Handling
-
-```sql
--- PostgreSQL
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
-SELECT NULLIF(salary, 0) FROM employees;
-
--- Vertica (same functions work)
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
-SELECT NULLIF(salary, 0) FROM employees;
 ```
 
 ### DELETE with JOIN
@@ -125,58 +84,13 @@ WHERE EXISTS (
 
 ## Data Type Mappings
 
-### Numeric Types
+> **See [Data Type Mapping Guide](data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
-| PostgreSQL Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| SMALLINT | SMALLINT | **8 bytes** in Vertica (2 bytes in PostgreSQL) |
-| INTEGER | INTEGER | **8 bytes** in Vertica (4 bytes in PostgreSQL) |
-| BIGINT | BIGINT | 8-byte integer |
-| DECIMAL(p,s) | NUMERIC(p,s) | Fixed precision decimal |
-| NUMERIC(p,s) | NUMERIC(p,s) | Same in both systems |
-| REAL | REAL | **8 bytes** in Vertica(4-byte floating point in PostgreSQL) |
-| DOUBLE PRECISION | DOUBLE PRECISION | 8-byte floating point |
-| SERIAL | IDENTITY | Auto-incrementing integer |
-| BIGSERIAL | IDENTITY | Auto-incrementing bigint |
+## Function Conversions
 
-### Character Types
-
-| PostgreSQL Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| CHAR(n) | CHAR(n) | Fixed-length character |
-| VARCHAR(n) | VARCHAR(n) | Variable-length character |
-| TEXT | LONG VARCHAR | Large text data |
-| NAME | VARCHAR(64) | PostgreSQL internal type |
-
-### Date/Time Types
-
-| PostgreSQL Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| DATE | DATE | Date only |
-| TIME | TIME | Time only |
-| TIMESTAMP | TIMESTAMP | Date and time |
-| TIMESTAMPTZ | TIMESTAMPTZ | Timezone-aware, store as UTC |
-| INTERVAL | INTERVAL | Time intervals |
-
-### Boolean Type
-
-| PostgreSQL Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| BOOLEAN | BOOLEAN | True/False values |
-
-### Array Types
-
-| PostgreSQL Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| INTEGER[] | ARRAY[INTEGER] | Use Vertica's ARRAY type |
-| VARCHAR[] | ARRAY[VARCHAR] | Array support in both |
-
-### JSON Types
-
-| PostgreSQL Type | Vertica Type | Notes |
-|-----------------|--------------|-------|
-| JSON | LONG VARCHAR | Store as text, parse in application |
-| JSONB | LONG VARBINARY | Binary JSON, store as binary |
+> **See [Function Mapping Guide](function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ## PL/pgSQL to PL/vSQL Conversion
 
@@ -218,24 +132,6 @@ FOR i IN RANGE 1..10 LOOP                     -- Standard range loop
 FOR record IN QUERY SELECT * FROM table LOOP  -- Query loop
 FOR record IN CURSOR cur LOOP                 -- Cursor loop
 ```
-
-### Common Functions
-
-| PostgreSQL Function | Vertica Equivalent | Notes |
-|---------------------|-------------------|-------|
-| CURRENT_TIMESTAMP variable | CURRENT_TIMESTAMP variable, or NOW() or SYSDATE() | Current date/time |
-| EXTRACT(field FROM timestamp) | EXTRACT(field FROM timestamp) | Date part extraction |
-| AGE(timestamp) | DATEDIFF('year', timestamp, CURRENT_DATE) | Age calculation |
-| COALESCE(value, replacement) | COALESCE(value, replacement) | NULL handling |
-| NULLIF(value1, value2) | NULLIF(value1, value2) | NULL if equal |
-| LENGTH(string) | LENGTH(string) | String length |
-| SUBSTRING(string FROM start FOR length) | SUBSTRING(string FROM start FOR length) | Substring extraction |
-| POSITION(substr IN string) | POSITION(substr IN string) | Find substring |
-| UPPER(string) | UPPER(string) | Convert to uppercase |
-| LOWER(string) | LOWER(string) | Convert to lowercase |
-| REPLACE(string, old, new) | REPLACE(string, old, new) | String replacement |
-| CAST(value AS type) | CAST(value AS type) | Type conversion |
-| GENERATE_SERIES(start, stop) | GENERATE_SERIES(start, stop) | Requires the pgcompat package |
 
 ### Window Functions
 
@@ -1151,7 +1047,7 @@ SELECT * FROM complex_query;
 
 ### 3. Arrays
 **Challenge**: PostgreSQL has rich array support
-**Solution**: Use Vertica's ARRAY type or normalize data
+**Solution**: Use Vertica's ARRAY type or normalize data. See [Array/Collection Type Mappings](data-type-mapping.md#arraycollection-type-mappings) for complete migration patterns.
 
 ```sql
 -- PostgreSQL
@@ -1183,7 +1079,7 @@ CREATE TABLE department_employees (
 
 **Solution**: Use **Vertica Flex Tables** to store and query JSON data. Flex Tables load JSON natively into an internal VMap structure, allowing you to query virtual columns directly without pre-defining a schema. For known JSON structures, you can also materialize frequently accessed keys as real columns (hybrid table).
 
-See [CREATE FLEX TABLE](../sql-syntax-reference.md#create-flex-table) for complete syntax reference.
+See [JSON and Semi-Structured Data](data-type-mapping.md#json-and-semi-structured-data) for decision guidance and [CREATE FLEX TABLE](sql-syntax-reference.md#create-flex-table) for complete syntax reference.
 
 #### Step 1: Create a flex table
 
@@ -1559,7 +1455,7 @@ SELECT * FROM emp_hierarchy;
 
 **Solution**: Use **Vertica Text Index** for efficient keyword search on text columns. Vertica text indexes use the Porter stemming algorithm and support case-sensitive/insensitive search, combined keyword queries, and exclusion patterns.
 
-See [CREATE TEXT INDEX](../sql-syntax-reference.md#create-text-index) for complete syntax reference.
+See [CREATE TEXT INDEX](sql-syntax-reference.md#create-text-index) for complete syntax reference.
 
 #### Step 1: Create a text index
 

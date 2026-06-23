@@ -34,21 +34,8 @@
 
 ### Quick Reference: MySQL → Vertica Patterns
 
-**Data Types**:
-- `DECIMAL(p,s)` in DECLARE → `NUMERIC` (no precision, default 37,15)
-- `ENUM`/`SET`/`JSON`/`GEOMETRY` → Not supported: use `VARCHAR` or `LONG VARCHAR`
-- `TINYBLOB`/`MEDIUMBLOB`/`LONGBLOB` → `LONG VARBINARY`
-- `YEAR` → `INTEGER` or `DATE`
-- `MEDIUMINT` → `INTEGER`
-- `TINYINT` → `TINYINT` (same name, same 8 bytes)
-- `BIT(n)` → `BIT(n)` or `INTEGER`
-
-**Functions**:
-- `IFNULL`/`ISNULL(a)` → `COALESCE`/`a IS NULL`
-- `IF(cond, t, f)` → `CASE WHEN cond THEN t ELSE f END`
-- `GROUP_CONCAT` → `LISTAGG(col, ',')`
+**Syntax Differences**:
 - `LIMIT n, m` → `LIMIT m OFFSET n`
-- `NEXTVAL(seq)` → `seq.NEXTVAL`
 - `SHOW TABLES` → `SELECT * FROM v_catalog.tables`
 - `DESCRIBE table` → `SELECT * FROM v_catalog.columns WHERE table_name = '...'`
 - `START TRANSACTION` → `BEGIN`
@@ -67,50 +54,15 @@
 
 ---
 
-## Data Type Mapping: MySQL → Vertica
+## Data Type Mapping
 
-| MySQL | Vertica | Notes |
-|-------|---------|-------|
-| `INT`/`INTEGER`/`BIGINT`/`SMALLINT`/`TINYINT` | Same names | **All 8 bytes in Vertica** (MySQL: 4,2,1 bytes) |
-| `MEDIUMINT` | `INTEGER` | MySQL 3 bytes → Vertica 8 bytes |
-| `DECIMAL(p,s)`/`NUMERIC(p,s)` | `NUMERIC(p,s)` | In DECLARE: use without precision (default 37,15) |
-| `FLOAT`/`REAL` | `REAL`/`FLOAT` | **8 bytes in Vertica** (4 bytes in MySQL) |
-| `DOUBLE` | `DOUBLE PRECISION` | 8 bytes |
-| `VARCHAR(n)`/`CHAR(n)` | Same names | Direct mapping |
-| `TEXT`/`MEDIUMTEXT`/`LONGTEXT` | `LONG VARCHAR` | Max 32MB |
-| `TINYTEXT` | `VARCHAR(255)` | Max 255 bytes |
-| `VARBINARY(n)` | `VARBINARY(n)` | Direct mapping |
-| `BLOB`/`MEDIUMBLOB`/`LONGBLOB` | `LONG VARBINARY` | Max 32MB |
-| `TINYBLOB` | `VARBINARY(255)` | Max 255 bytes |
-| `DATE`/`TIME` | Same names | Direct mapping |
-| `DATETIME`/`TIMESTAMP` | `TIMESTAMP` | Direct mapping |
-| `YEAR` | `INTEGER` or `DATE` | No YEAR type in Vertica |
-| `JSON`/`ENUM`/`SET`/`GEOMETRY` | `LONG VARCHAR` or `VARCHAR` | Not supported — store as string |
-| `BIT(n)` | `BIT(n)` or `INTEGER` | Direct mapping |
+> **See [Data Type Mapping Guide](../data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
----
+## Function Conversions
 
-## SQL Syntax & Function Mapping
-
-**LIMIT**: `LIMIT n, m` (MySQL) → `LIMIT m OFFSET n` (Vertica, no comma syntax)
-
-**Date/Time Functions**:
-| MySQL | Vertica |
-|-------|---------|
-| `CURDATE()`/`CURTIME()`/`NOW()`/`SYSDATE()` | `CURRENT_DATE`/`CURRENT_TIME`/`CURRENT_TIMESTAMP` |
-| `DATE_ADD(d, INTERVAL n DAY)`/`DATE_SUB(...)` | `d + INTERVAL 'n day'`/`d - INTERVAL 'n day'` |
-| `DATE_FORMAT`/`STR_TO_DATE`/`TIME_FORMAT` | `TO_CHAR`/`TO_DATE`/`TO_CHAR` |
-| `YEAR(d)`/`MONTH(d)`/`DAY(d)`/`HOUR(d)`/`MINUTE(d)`/`SECOND(d)`/`WEEK(d)`/`QUARTER(d)`/`DAYOFWEEK(d)`/`DAYOFYEAR(d)` | `EXTRACT(UNIT FROM d)` (use `ISODOW` for dayofweek, `DOY` for dayofyear) |
-| `TIMEDIFF(t1, t2)` | `t1 - t2` |
-| `UTC_DATE()`/`UTC_TIME()`/`UTC_TIMESTAMP()`/`UNIX_TIMESTAMP(d)`/`FROM_UNIXTIME(n)` | Custom (no direct equivalent) |
-
-**String Functions**:
-| MySQL | Vertica |
-|-------|---------|
-| `LOCATE(sub, str)`/`POSITION(sub IN str)`/`LCASE(str)`/`UCASE(str)`/`CHAR(n)` | `INSTR(str, sub)`/`LOWER(str)`/`UPPER(str)`/`CHR(n)` |
-| `SUBSTRING(str, n, m)`/`LEFT(str, n)`/`RIGHT(str, n)`/`MID(str, n, m)`/`SPACE(n)` | `SUBSTR(str, n, m)`/`SUBSTR(str, 1, n)`/`SUBSTR(str, -n)`/`LPAD('', n, ' ')` |
-| `GROUP_CONCAT(col)`/`CONCAT_WS(sep, a, b)` | `LISTAGG(col, ',')` (no direct equivalent for CONCAT_WS) |
-| Others (`LENGTH`/`SUBSTR`/`REPLACE`/`UPPER`/`LOWER`/`TRIM`/`LTRIM`/`RTRIM`/`CONCAT`/`LPAD`/`RPAD`/`REVERSE`/`REPEAT`/`INSTR`/`CHAR_LENGTH`/`BIT_LENGTH`) | Same names (direct mapping) |
+> **See [Function Mapping Guide](../function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -245,24 +197,6 @@ var_out1, var_out2, var_return := CALL proc([params]); -- multiple OUTs → unpa
 
 **Deep Recursion** (>20 levels): `ALTER SESSION SET PARAMETER WithClauseMaterialization = 1;` or query hint `WITH /*+ENABLE_WITH_CLAUSE_MATERIALIZATION*/ RECURSIVE ...`
 
----
-
-## Common MySQL Functions → Vertica
-
-| MySQL | Vertica | Notes |
-|-------|---------|-------|
-| `IFNULL(a, b)`/`ISNULL(a)` | `COALESCE(a, b)`/`a IS NULL` | ANSI standard |
-| `IF(cond, t, f)` | `CASE WHEN cond THEN t ELSE f END` | Use CASE |
-| `NULLIF`/`GREATEST`/`LEAST`/`ABS`/`CEIL`/`FLOOR`/`ROUND`/`MOD`/`POWER`/`SQRT`/`PI`/`SIGN`/`BIT_LENGTH` | Same names | Direct mapping |
-| `CEILING(n)`/`TRUNCATE(n, m)`/`RAND()`/`CHAR(n)`/`ORD(str)` | `CEIL(n)`/`TRUNC(n, m)`/`RANDOM()`/`CHR(n)` | Different names |
-| `CONV`/`HEX`/`UNHEX`/`BIN`/`OCT` | Custom | No direct equivalent |
-| `CHAR_LENGTH(str)` | `LENGTH(str)` | Direct mapping |
-
-**FULLTEXT Index**: `MATCH(content) AGAINST('term')` → `content ILIKE '%term%'` (or use Vertica Text Indexes)
-
-**JSON Functions**: `JSON_EXTRACT(data, '$.name')` → `REGEXP_SUBSTR(data, '"name":"([^"]*)"', 1, 1, '', 1)` (store as text, parse with regex)
-
----
 
 ---
 

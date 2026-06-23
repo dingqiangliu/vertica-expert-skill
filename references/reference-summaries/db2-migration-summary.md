@@ -37,51 +37,10 @@
 
 ---
 
-## Data Type Mapping: DB2 → Vertica
+## Data Type Mapping
 
-### Numeric Types
-| DB2 | Vertica | Size Difference |
-|-----|---------|-----------------|
-| `SMALLINT` | `SMALLINT` | DB2: 2 bytes, Vertica: **8 bytes** |
-| `INTEGER` | `INTEGER` | DB2: 4 bytes, Vertica: **8 bytes** |
-| `BIGINT` | `BIGINT` | 8 bytes |
-| `DECIMAL(p, s)` | `NUMERIC(p, s)` | - |
-| `DEC(p, s)` | `NUMERIC(p, s)` | - |
-| `NUMERIC(p, s)` | `NUMERIC(p, s)` | - |
-| `REAL` | `REAL` | DB2: 4 bytes, Vertica: **8 bytes** |
-| `DOUBLE PRECISION` | `DOUBLE PRECISION` | 8 bytes |
-| `FLOAT` | `DOUBLE PRECISION` | Not supported |
-| `DECFLOAT` | `DOUBLE PRECISION` | Not supported |
-
-### Character Types
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `CHAR(n)` | `CHAR(n)` | - |
-| `VARCHAR(n)` | `VARCHAR(n)` | Max 65000 |
-| `VARCHAR(32672)` | `VARCHAR(65000)` | Adjust to limits |
-| `CLOB(n)` | `LONG VARCHAR` | Max 32MB |
-| `GRAPHIC(n)` | `CHAR(n)` | DBCS |
-| `VARGRAPHIC(n)` | `VARCHAR(n)` | Variable DBCS |
-| `DBCLOB(n)` | `LONG VARCHAR` | UTF-8 |
-
-### Date/Time Types
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `DATE` | `DATE` | - |
-| `TIME` | `TIME` | - |
-| `TIMESTAMP` | `TIMESTAMP` | - |
-| `TIMESTAMP(p)` | `TIMESTAMP(p)` | Precision matching |
-| `TIMESTAMP WITH TIME ZONE` | `TIMESTAMPTZ` | - |
-
-### Binary & Other Types
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `BINARY(n)` | `BINARY(n)` | - |
-| `VARBINARY(n)` | `VARBINARY(n)` | - |
-| `BLOB(n)` | `LONG VARBINARY` | Max 32MB |
-| `BOOLEAN` | `BOOLEAN` | - |
-| `XML` | `LONG VARCHAR` | Store as text |
-| `ROWID` | `VARCHAR(64)` | Row identifier |
+> **See [Data Type Mapping Guide](../data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -96,40 +55,10 @@ SELECT * FROM employees FETCH FIRST 10 ROWS ONLY;
 SELECT * FROM employees LIMIT 10;
 ```
 
-### Date/Time Functions
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `CURRENT DATE` | `CURRENT_DATE` | Direct mapping |
-| `CURRENT TIME` | `CURRENT_TIME` | Direct mapping |
-| `CURRENT TIMESTAMP` | `CURRENT_TIMESTAMP` | Direct mapping |
-| `CURRENT DATE + 1 DAY` | `CURRENT_DATE + INTERVAL '1 day'` | Interval syntax |
-| `DAYS_BETWEEN(d1, d2)` | `DATEDIFF(day, d1, d2)` | Different function |
-| `YEAR(d)` | `EXTRACT(YEAR FROM d)` | Use EXTRACT |
-| `MONTH(d)` | `EXTRACT(MONTH FROM d)` | Use EXTRACT |
-| `DAY(d)` | `EXTRACT(DAY FROM d)` | Use EXTRACT |
-| `HOUR(d)` | `EXTRACT(HOUR FROM d)` | Use EXTRACT |
-| `MINUTE(d)` | `EXTRACT(MINUTE FROM d)` | Use EXTRACT |
-| `SECOND(d)` | `EXTRACT(SECOND FROM d)` | Use EXTRACT |
+## Function Conversions
 
-### String Functions
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `LENGTH(str)` | `LENGTH(str)` | Direct mapping |
-| `SUBSTR(str, n, m)` | `SUBSTR(str, n, m)` | Direct mapping |
-| `SUBSTRING(str, n, m)` | `SUBSTR(str, n, m)` | Use SUBSTR |
-| `POSSTR(str, sub)` | `INSTR(str, sub)` | Different function |
-| `LOCATE(sub, str)` | `INSTR(str, sub)` | Different function |
-| `CONCAT(a, b)` | `CONCAT(a, b)` or `a \| b` | Direct mapping |
-| `STRIP(str)` | `TRIM(str)` | Different function |
-| `LCASE(str)` | `LOWER(str)` | Different function |
-| `UCASE(str)` | `UPPER(str)` | Different function |
-
-### Aggregate Functions (CRITICAL SYNTAX DIFFERENCES)
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `MEDIAN(salary)` | `MEDIAN(salary) OVER ()` | **Requires OVER clause** |
-| `LISTAGG(name, ', ') WITHIN GROUP (ORDER BY name)` | `LISTAGG(name USING PARAMETERS separator=', ')` | Different syntax |
-| `XMLAGG(XMLELEMENT(...) ORDER BY ...)` | `LISTAGG(name)` | Convert to LISTAGG |
+> **See [Function Mapping Guide](../function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -243,18 +172,27 @@ $$;
 
 **Key Difference**: DB2 uses `EXECUTE IMMEDIATE stmt INTO var`; Vertica uses `EXECUTE 'stmt' INTO var` (statement as string directly).
 
----
+### Special Registers (sysibm.sysdummy1)
 
-## Special Registers
+**DB2** uses `sysibm.sysdummy1` to query system information:
+```sql
+-- DB2
+SELECT CURRENT SCHEMA FROM sysibm.sysdummy1;
+SELECT CURRENT TIMESTAMP FROM sysibm.sysdummy1;
+SELECT CURRENT DATE FROM sysibm.sysdummy1;
+SELECT CURRENT TIME FROM sysibm.sysdummy1;
+```
 
-| DB2 | Vertica | Notes |
-|-----|---------|-------|
-| `CURRENT SCHEMA` | `CURRENT_SCHEMA()` | Function call |
-| `CURRENT USER` | `CURRENT_USER` | Direct mapping |
-| `CURRENT DATE` | `CURRENT_DATE` | Direct mapping |
-| `CURRENT TIME` | `CURRENT_TIME` | Direct mapping |
-| `CURRENT TIMESTAMP` | `CURRENT_TIMESTAMP` | Direct mapping |
-| `CURRENT TIMEZONE` | `TIMEZONE()` | Function call |
+**Vertica** (no table needed):
+```sql
+-- Vertica
+SELECT CURRENT_SCHEMA;
+SELECT CURRENT_TIMESTAMP;
+SELECT CURRENT_DATE;
+SELECT CURRENT_TIME;
+```
+
+> **Note**: See [Function Mapping Guide](../function-mapping.md) for complete DB2 function mappings.
 
 ---
 
@@ -263,14 +201,6 @@ $$;
 | DB2 | Vertica |
 |-----|---------|
 | `id INTEGER GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1)` | `id IDENTITY(1, 1)` |
-
-## Sequences
-
-**Creation**: Same syntax for both. **Usage**:
-| DB2 | Vertica |
-|-----|---------|
-| `SELECT NEXT VALUE FOR seq_name FROM sysibm.sysdummy1` | `SELECT NEXTVAL('seq_name')` |
-| `SELECT PREVIOUS VALUE FOR seq_name FROM sysibm.sysdummy1` | `SELECT CURRVAL('seq_name')` |
 
 ---
 

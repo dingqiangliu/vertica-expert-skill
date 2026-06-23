@@ -32,36 +32,10 @@
 
 ---
 
-## Data Type Mapping: Oracle → Vertica
+## Data Type Mapping
 
-### Numeric Types (Precision-Based Selection)
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| `NUMBER(1-9)` | `INTEGER` | 8 bytes in Vertica (4-byte in Oracle) |
-| `NUMBER(10-18)` | `BIGINT` | 8-byte integer |
-| `NUMBER(>18)` | `NUMBER(p,s)` or `NUMERIC(p,s)` | Variable precision |
-| `NUMBER(p,s)` | `NUMERIC(p,s)` | Use NUMERIC for precision |
-| `NUMBER` | `NUMERIC(38, 10)` | Default precision |
-| `FLOAT` | `DOUBLE PRECISION` | 8-byte floating point |
-
-### Character Types
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| `VARCHAR2(n)` | `VARCHAR2(n)` or `VARCHAR(n)` | Same functionality |
-| `NVARCHAR2(n)` | `VARCHAR(n)` | Vertica uses UTF-8 |
-| `CHAR(n)` | `CHAR(n)` | Fixed length |
-| `CLOB` | `LONG VARCHAR` | Max 32MB |
-| `NCLOB` | `LONG VARCHAR` | Vertica uses UTF-8 |
-
-### Date/Time & Binary Types
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| `DATE` | `TIMESTAMP` | Oracle DATE includes time |
-| `TIMESTAMP` | `TIMESTAMP` | Direct mapping |
-| `TIMESTAMP WITH TIME ZONE` | `TIMESTAMPTZ` | Direct mapping |
-| `BOOLEAN` | `BOOLEAN` | Direct mapping (Vertica 9.3+) |
-| `RAW(n)` | `VARBINARY(n)` | Direct mapping |
-| `BLOB` | `LONG VARBINARY` | Max 32MB |
+> **See [Data Type Mapping Guide](../data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -197,31 +171,10 @@ sequenceNo := EXECUTE 'select to_char(' || sequenceName || '.nextval)';
 
 ---
 
-## Common Oracle Functions → Vertica
+## Function Conversions
 
-| Oracle | Vertica | Notes |
-|--------|---------|-------|
-| `NVL(a, b)` | `COALESCE(a, b)` | Direct replacement |
-| `NVL2(a, b, c)` | `CASE WHEN a IS NOT NULL THEN b ELSE c END` | Use CASE |
-| `DECODE(a, b, c, d)` | `CASE WHEN a = b THEN c ELSE d END` | Use CASE |
-| `SYSDATE` | `CURRENT_DATE` | Direct replacement |
-| `SYSTIMESTAMP` | `CURRENT_TIMESTAMP` | Direct replacement |
-| `ADD_MONTHS(d, n)` | `ADD_MONTHS(d, n)` | Direct mapping |
-| `MONTHS_BETWEEN(d1, d2)` | `MONTHS_BETWEEN(d1, d2)` | Direct mapping |
-| `NEXT_DAY(d, day)` | `NEXT_DAY(d, day)` | Direct mapping |
-| `LAST_DAY(d)` | `LAST_DAY(d)` | Direct mapping |
-| `TRUNC(d, fmt)` | `TRUNC(d, fmt)` | Direct mapping |
-| `ROUND(d, fmt)` | `ROUND(d, fmt)` | Direct mapping |
-| `INSTR(str, sub)` | `INSTR(str, sub)` | Direct mapping |
-| `SUBSTR(str, n, m)` | `SUBSTR(str, n, m)` | Direct mapping |
-| `LENGTH(str)` | `LENGTH(str)` | Direct mapping |
-| `UPPER(str)` | `UPPER(str)` | Direct mapping |
-| `LOWER(str)` | `LOWER(str)` | Direct mapping |
-| `TRIM(str)` | `TRIM(str)` | Direct mapping |
-| `REPLACE(str, old, new)` | `REPLACE(str, old, new)` | Direct mapping |
-| `TO_CHAR(d, fmt)` | `TO_CHAR(d, fmt)` | Direct mapping |
-| `TO_DATE(str, fmt)` | `TO_DATE(str, fmt)` | Direct mapping |
-| `TO_NUMBER(str, fmt)` | `TO_NUMBER(str, fmt)` | Direct mapping |
+> **See [Function Mapping Guide](../function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -292,8 +245,8 @@ var_out1, var_out2, var_return := CALL procedure_name([params]);  -- multiple OU
 
 | Oracle | Vertica |
 |--------|---------|
-| `seq_name.NEXTVAL` | `NEXTVAL('seq_name')` |
-| `seq_name.CURRVAL` | `CURRVAL('seq_name')` |
+| `seq_name.NEXTVAL` | `seq_name.NEXTVAL or NEXTVAL('seq_name')` |
+| `seq_name.CURRVAL` | `seq_name.CURRVAL or CURRVAL('seq_name')` |
 | `NOCACHE` | `NO CACHE` |
 | `NOCYCLE` | `NO CYCLE` |
 

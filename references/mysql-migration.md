@@ -145,30 +145,6 @@ JOIN departments d ON e.dept_id = d.dept_id
 LIMIT 10;
 ```
 
-### String Concatenation
-
-```sql
--- MySQL
-SELECT CONCAT(first_name, ' ', last_name) as full_name FROM employees;
-SELECT first_name + ' ' + last_name as full_name FROM employees; -- Only works with numeric coercion
-
--- Vertica (use || operator or CONCAT)
-SELECT first_name || ' ' || last_name as full_name FROM employees;
-SELECT CONCAT(first_name, CONCAT(' ', last_name)) as full_name FROM employees;
-```
-
-### Date Functions
-
-```sql
--- MySQL
-SELECT NOW(), DATE_ADD(hire_date, INTERVAL 6 MONTH)
-FROM employees;
-
--- Vertica
-SELECT NOW(), ADD_MONTHS(hire_date, 6)
-FROM employees;
-```
-
 ### Auto-increment Columns
 
 ```sql
@@ -185,95 +161,17 @@ CREATE TABLE employees (
 );
 ```
 
-### NULL Handling
-
-```sql
--- MySQL
-SELECT IFNULL(middle_name, 'N/A') FROM employees;
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
-
--- Vertica (both ISNULL and COALESCE are supported; COALESCE is ANSI standard and preferred)
-SELECT ISNULL(middle_name, 'N/A') FROM employees;
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
-```
-
 ## Data Type Mappings
 
-### Numeric Types
+> **See [Data Type Mapping Guide](data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
-| MySQL Type | Vertica Type | Notes |
-|------------|--------------|-------|
-| TINYINT | TINYINT | `INT`, `INTEGER`, `INT8`, `SMALLINT`, `TINYINT`, and `BIGINT` are all synonyms for the same signed 64-bit integer data type in Vertica |
-| SMALLINT | SMALLINT | **8 bytes** in Vertica (2-byte integer in MySQL) |
-| MEDIUMINT | INTEGER | **8 bytes** in Vertica (3-byte in MySQL) |
-| INT | INTEGER | **8 bytes** in Vertica (4-byte integer in MySQL) |
-| BIGINT | BIGINT | 8-byte integer |
-| DECIMAL(p,s) | NUMERIC(p,s) | Fixed precision decimal |
-| FLOAT | REAL | **8 bytes** in Vertica (4-byte floating point in MySQL) |
-| DOUBLE | DOUBLE PRECISION | 8-byte floating point |
+## Function Conversions
 
-### Character Types
-
-| MySQL Type | Vertica Type | Notes |
-|------------|--------------|-------|
-| CHAR(n) | CHAR(n) | Fixed-length character |
-| VARCHAR(n) | VARCHAR(n) | Variable-length character |
-| TINYTEXT | VARCHAR(255) | Small text, use VARCHAR |
-| TEXT | LONG VARCHAR | Medium text |
-| MEDIUMTEXT | LONG VARCHAR | Large text |
-| LONGTEXT | LONG VARCHAR | Very large text |
-
-### Date/Time Types
-
-| MySQL Type | Vertica Type | Notes |
-|------------|--------------|-------|
-| DATE | DATE | Date only |
-| TIME | TIME | Time only |
-| DATETIME | TIMESTAMP | Date and time |
-| TIMESTAMP | TIMESTAMP | Unix timestamp |
-| YEAR | INTEGER | Store as integer |
-
-### Binary Types
-
-| MySQL Type | Vertica Type | Notes |
-|------------|--------------|-------|
-| BINARY(n) | BINARY(n) | Fixed-length binary |
-| VARBINARY(n) | VARBINARY(n) | Variable-length binary |
-| TINYBLOB | VARBINARY(255) | Small binary |
-| BLOB | LONG VARBINARY | Medium binary |
-| MEDIUMBLOB | LONG VARBINARY | Large binary |
-| LONGBLOB | LONG VARBINARY | Very large binary |
-
-### Other Types
-
-| MySQL Type | Vertica Type | Notes |
-|------------|--------------|-------|
-| ENUM | VARCHAR | Store as string |
-| SET | VARCHAR | Store as comma-separated string |
-| JSON | LONG VARCHAR | Store as text |
-| BOOLEAN | BOOLEAN | True/False values |
+> **See [Function Mapping Guide](function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ## SQL Syntax Differences
-
-### Common Functions
-
-| MySQL Function | Vertica Equivalent | Notes |
-|----------------|-------------------|-------|
-| NOW() | NOW() or SYSDATE() | Current date/time |
-| CURDATE() | CURRENT_DATE() | Current date |
-| CURTIME() | CURRENT_TIME() | Current time |
-| DATE_ADD(date, INTERVAL n unit) | date + INTERVAL 'n' unit | Date arithmetic |
-| DATE_SUB(date, INTERVAL n unit) | date - INTERVAL 'n' unit | Date subtraction |
-| DATEDIFF(date1, date2) | date1 - date2 | Date difference in days |
-| IFNULL(value, replacement) | COALESCE(value, replacement) | NULL handling |
-| LENGTH(string) | LENGTH(string) | String length in bytes |
-| CHAR_LENGTH(string) | LENGTH(string) | String length in characters |
-| SUBSTRING(string, start, length) | SUBSTRING(string, start, length), or SUBSTRING(string FROM start FOR length) | Substring extraction |
-| LOCATE(substr, string) | INSTR(string, substr), POSITION(substr IN string) | Find substring |
-| UPPER(string) | UPPER(string) | Convert to uppercase |
-| LOWER(string) | LOWER(string) | Convert to lowercase |
-| REPLACE(string, old, new) | REPLACE(string, old, new) | String replacement |
-| CAST(value AS type) | CAST(value AS type) | Type conversion |
 
 ### LIMIT and OFFSET
 
@@ -321,19 +219,6 @@ WHEN MATCHED THEN
 WHEN NOT MATCHED THEN
     INSERT (emp_id, emp_name) VALUES (s.emp_id, s.emp_name);
 ```
-
-### GROUP_CONCAT
-
-```sql
--- MySQL
-SELECT dept_id, GROUP_CONCAT(emp_name SEPARATOR ', ') as employees
-FROM employees
-GROUP BY dept_id;
-
--- Vertica (use LISTAGG)
-SELECT dept_id, LISTAGG(emp_name::VARCHAR) as employees
-FROM employees
-GROUP BY dept_id;
 ```
 
 ## Stored Procedure Migration
@@ -975,7 +860,7 @@ CREATE TABLE employees (
 
 ### 5. JSON Functions
 **Challenge**: MySQL JSON functions
-**Solution**: Store as text and parse in application layer
+**Solution**: Use **Vertica Flex Tables** for dynamic queries or store as `LONG VARCHAR` for simple storage. See [JSON and Semi-Structured Data](data-type-mapping.md#json-and-semi-structured-data) for decision guidance.
 
 ```sql
 -- MySQL

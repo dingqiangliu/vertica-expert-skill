@@ -40,8 +40,6 @@
 - SQL Server recursive CTE: anchor can use `*`; Vertica anchor **cannot use ***
 - SQL Server UNION: implicit type conversion; Vertica UNION: **explicit CAST required**
 - SQL Server computed columns (`AS expr`) → Vertica: `DEFAULT USING (expr)`
-- SQL Server `JSON_VALUE()`/`OPENJSON()` → Vertica: Flex Tables
-- SQL Server `CONTAINS()`/`FREETEXT()` → Vertica: Text Index
 - SQL Server `[identifier]` → Vertica: `"identifier"` (square brackets not supported)
 - SQL Server `dbo.` prefix → Remove if no `USE`, or replace with database name as schema
 - SQL Server `USE [dbname]` → `CREATE SCHEMA` + `SET SEARCH_PATH` (both required)
@@ -83,40 +81,15 @@
 
 ---
 
-## Data Type Mapping: SQL Server → Vertica
+## Data Type Mapping
 
-| SQL Server | Vertica | Notes |
-|------------|---------|-------|
-| `INT` | `INTEGER` | Direct mapping |
-| `BIGINT` | `BIGINT` | Direct mapping |
-| `SMALLINT` | `SMALLINT` | Direct mapping |
-| `TINYINT` | `TINYINT` | Direct mapping |
-| `DECIMAL(p, s)` | `NUMERIC(p, s)` | Direct mapping |
-| `NUMERIC(p, s)` | `NUMERIC(p, s)` | Direct mapping |
-| `FLOAT(n)` | `FLOAT` or `DOUBLE PRECISION` | Direct mapping |
-| `REAL` | `REAL` or `FLOAT` | Direct mapping |
-| `MONEY` | `NUMERIC(19, 4)` | Use NUMERIC for precision |
-| `SMALLMONEY` | `NUMERIC(10, 4)` | Use NUMERIC for precision |
-| `VARCHAR(n)` | `VARCHAR(n)` | Direct mapping |
-| `NVARCHAR(n)` | `VARCHAR(n)` | Vertica uses UTF-8 |
-| `CHAR(n)` | `CHAR(n)` | Direct mapping |
-| `NCHAR(n)` | `CHAR(n)` | Vertica uses UTF-8 |
-| `TEXT` | `LONG VARCHAR` | Max 32MB (deprecated) |
-| `NTEXT` | `LONG VARCHAR` | Max 32MB (deprecated) |
-| `VARBINARY(n)` | `VARBINARY(n)` | Direct mapping |
-| `IMAGE` | `LONG VARBINARY` | Max 32MB (deprecated) |
-| `DATETIME` | `TIMESTAMP` | Direct mapping |
-| `DATETIME2` | `TIMESTAMP` | Direct mapping |
-| `SMALLDATETIME` | `TIMESTAMP` | Direct mapping |
-| `DATE` | `DATE` | Direct mapping |
-| `TIME` | `TIME` | Direct mapping |
-| `DATETIMEOFFSET` | `TIMESTAMPTZ` | Direct mapping |
-| `UNIQUEIDENTIFIER` | `VARCHAR(36)` | Store as string |
-| `BIT` | `BOOLEAN` | Direct mapping |
-| `SQL_VARIANT` | `VARCHAR(8000)` | No direct equivalent |
-| `XML` | `LONG VARCHAR` | Store as string |
-| `GEOGRAPHY` | `GEOGRAPHY` | Direct mapping |
-| `GEOMETRY` | `GEOMETRY` | Direct mapping |
+> **See [Data Type Mapping Guide](../data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
+
+## Function Conversions
+
+> **See [Function Mapping Guide](../function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ---
 
@@ -404,42 +377,6 @@ SELECT 'ID001' AS code UNION ALL SELECT CAST(123 AS VARCHAR);
 
 ---
 
-## Common SQL Server Functions → Vertica
-
-| SQL Server | Vertica | Notes |
-|------------|---------|-------|
-| `ISNULL(a, b)` | `COALESCE(a, b)` | Direct replacement |
-| `IIF(cond, t, f)` | `CASE WHEN cond THEN t ELSE f END` | Use CASE |
-| `CHOOSE(n, v1, v2)` | `CASE n WHEN 1 THEN v1 WHEN 2 THEN v2 END` | Use CASE |
-| `GETDATE()` | `CURRENT_TIMESTAMP` | Direct replacement |
-| `GETUTCDATE()` | `GETUTCDATE()` or `CURRENT_TIMESTAMP` | Direct mapping |
-| `SYSDATETIME()` | `CURRENT_TIMESTAMP` | Direct replacement |
-| `DATEADD(day, n, d)` | `DATEADD(day, n, d)` or `d + INTERVAL 'n day'` | Direct mapping |
-| `DATEDIFF(day, d1, d2)` | `DATEDIFF(day, d1, d2)` | Direct mapping |
-| `DATEPART(year, d)` | `DATEPART(year, d)` or `EXTRACT(YEAR FROM d)` | Direct mapping |
-| `YEAR(d)` | `EXTRACT(YEAR FROM d)` | Use EXTRACT |
-| `MONTH(d)` | `EXTRACT(MONTH FROM d)` | Use EXTRACT |
-| `DAY(d)` | `EXTRACT(DAY FROM d)` | Use EXTRACT |
-| `LEN(str)` | `LENGTH(str)` | Different function |
-| `SUBSTRING(str, n, m)` | `SUBSTR(str, n, m)` | Direct mapping |
-| `CHARINDEX(sub, str)` | `INSTR(str, sub)` | Different function |
-| `PATINDEX(pattern, str)` | `REGEXP_INSTR(str, pattern)` | Use regex |
-| `REPLACE(str, old, new)` | `REPLACE(str, old, new)` | Direct mapping |
-| `UPPER(str)` | `UPPER(str)` | Direct mapping |
-| `LOWER(str)` | `LOWER(str)` | Direct mapping |
-| `LTRIM(str)` | `LTRIM(str)` | Direct mapping |
-| `RTRIM(str)` | `RTRIM(str)` | Direct mapping |
-| `TRIM(str)` | `TRIM(str)` | Direct mapping |
-| `CONCAT(a, b)` | `CONCAT(a, b)` or `a || b` | Direct mapping |
-| `STR(n, len, dec)` | `TO_CHAR(n, 'fmt')` | Use TO_CHAR |
-| `CONVERT(type, expr)` | `CAST(expr AS type)` | Use CAST |
-| `CAST(expr AS type)` | `CAST(expr AS type)` | Direct mapping |
-| `TRY_CAST(expr AS type)` | `CAST(expr AS type)` | No TRY_CAST |
-| `TRY_CONVERT(type, expr)` | `CAST(expr AS type)` | No TRY_CONVERT |
-| `ISNUMERIC(str)` | Custom | No direct equivalent |
-
----
-
 ## Computed Columns (CRITICAL)
 
 **SQL Server**: `AS expression` computed columns. **Vertica**: No direct equivalent — use **Flattened Table** with `DEFAULT USING`.
@@ -458,35 +395,6 @@ CREATE TABLE orders (
 - **`DEFAULT`**: Evaluated automatically at INSERT time
 - **`SET USING`**: Evaluated only when `REFRESH_COLUMNS()` is called
 - `REFRESH_COLUMNS` modes: `UPDATE` (default) vs `REBUILD` (auto-committed)
-
----
-
-## JSON Support
-
-**SQL Server**: `JSON_VALUE()`, `JSON_QUERY()`, `OPENJSON()`, `FOR JSON`. **Vertica**: No native JSON type — use **Flex Tables**.
-
-```sql
--- Vertica Flex Table
-CREATE FLEX TABLE json_events();
-COPY json_events FROM '/data/events.json' PARSER fjsonparser();
-SELECT compute_flextable_keys_and_build_view('json_events');
-SELECT "name" FROM json_events;  -- Query virtual columns directly
-```
-
----
-
-## Full-Text Search
-
-**SQL Server**: `CONTAINS()`, `FREETEXT()`, full-text catalogs. **Vertica**: Use **Text Index**.
-
-```sql
--- Vertica Text Index
-CREATE TEXT INDEX articles_text_idx ON articles (id, content);
-SELECT * FROM articles WHERE id IN (
-    SELECT doc_id FROM articles_text_idx
-    WHERE token = v_txtindex.StemmerCaseInsensitive('search term')
-);
-```
 
 ---
 

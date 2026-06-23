@@ -69,7 +69,7 @@ Manager will provide:
 1. Generic Migration Guide - Master rules
 2. SQL Syntax Reference - Vertica syntax
 3. Function Mapping Guide - Function conversion
-4. Data Types - Type conversion
+4. Data Type Mapping - Type mapping guide
 5. Source-specific Migration Guide Summary - Database-specific syntax
 
 **Load On-Demand During Migration (Only When Needed, from vertica-expert skill):**

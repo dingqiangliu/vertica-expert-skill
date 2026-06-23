@@ -33,7 +33,7 @@ Before starting ANY migration, complete ALL of these steps **in order**:
 - [ ] **Read the source-specific migration guide** (oracle-migration.md, sqlserver-migration.md, etc.)
 - [ ] **Read the SQL Syntax Reference** (`sql-syntax-reference.md`)
 - [ ] **Read the Function Mapping Guide** (`function-mapping.md`)
-- [ ] **Read the Data Types Guide** (`data-types.md`)
+- [ ] **Read the Data Type Mapping Guide** (`data-type-mapping.md`)
 - [ ] **Read the User-Defined SQL Functions Guide** (`user-defined-sql-functions-guide.md`) if migrating functions
 - [ ] **Read the Stored Procedures Guide** (`stored-procedures-guide.md`) if migrating procedures
 - [ ] **List all migration requirements** from the guides above and present them to the user
@@ -435,7 +435,7 @@ Read in this order of priority:
 | 3 | **Source-specific migration guide** | Database-specific syntax |
 | 4 | **SQL Syntax Reference** (`sql-syntax-reference.md`) | Syntax questions |
 | 5 | **Function Mapping Guide** (`function-mapping.md`) | Function conversion |
-| 6 | **Data Types Guide** (`data-types.md`) | Type conversion |
+| 6 | **Data Type Mapping Guide** (`data-type-mapping.md`) | Type conversion |
 | 7 | **User-Defined SQL Functions Guide** (`user-defined-sql-functions-guide.md`) | SQL function development |
 | 8 | **Stored Procedures Guide** (`stored-procedures-guide.md`) | PL/vSQL development |
 | 9 | **UDx Development Guide** (`udx-development-guide.md`) | C++/Python/Java/R functions |
@@ -510,7 +510,7 @@ Use this checklist to verify that every migrated object is correct and complete.
 | Problem | Solution |
 |---------|----------|
 | OUT/INOUT keywords removed | Always preserve parameter modes exactly |
-| Data type mismatches | Use Data Types Guide for proper mapping |
+| Data type mismatches | Use Data Type Mapping Guide for proper mapping |
 | Function not found | Use Function Mapping Guide or create custom function |
 | Syntax errors after conversion | Reference SQL Syntax Reference |
 | Dependency order issues | Maintain exact source file order — never reorder |

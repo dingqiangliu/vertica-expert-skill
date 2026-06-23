@@ -42,244 +42,31 @@ JOIN departments d ON e.dept_id = d.dept_id
 LIMIT 10;
 ```
 
-### String Concatenation
-
-```sql
--- DB2
-SELECT CONCAT(first_name, CONCAT(' ', last_name)) as full_name FROM employees;
-SELECT first_name || ' ' || last_name as full_name FROM employees;
-
--- Vertica (use || operator or CONCAT)
-SELECT first_name || ' ' || last_name as full_name FROM employees;
-SELECT CONCAT(first_name, CONCAT(' ', last_name)) as full_name FROM employees;
-```
-
-### Date Functions
-
-```sql
--- DB2
-SELECT CURRENT TIMESTAMP, CURRENT DATE FROM sysibm.sysdummy1;
-SELECT hire_date + 6 MONTHS FROM employees;
-
--- Vertica
-SELECT CURRENT_TIMESTAMP, CURRENT_DATE;
-SELECT hire_date + interval '6 MONTHS' FROM employees;
-```
-
-### Identity Columns and Auto-increment
-
-```sql
--- DB2
-CREATE TABLE employees (
-    emp_id INTEGER GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1),
-    emp_name VARCHAR(100)
-);
-
--- DB2 alternative with SEQUENCE
-CREATE SEQUENCE emp_seq START WITH 1 INCREMENT BY 1;
-CREATE TABLE employees (
-    emp_id INTEGER DEFAULT NEXTVAL FOR emp_seq,
-    emp_name VARCHAR(100)
-);
-
--- Vertica (use AUTO_INCREMENT or IDENTITY)
-CREATE TABLE employees (
-    emp_id IDENTITY PRIMARY KEY,
-    emp_name VARCHAR(100)
-);
-
--- Vertica alternative with SEQUENCE
-CREATE SEQUENCE emp_seq START WITH 1 INCREMENT BY 1;
-CREATE TABLE employees (
-    emp_id INTEGER DEFAULT emp_seq.NEXTVAL,
-    emp_name VARCHAR(100)
-);
-```
-
-### NULL Handling
-
-```sql
--- DB2
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
-SELECT VALUE(middle_name, 'N/A') FROM employees; -- DB2-specific
-SELECT IFNULL(middle_name, 'N/A') FROM employees; -- DB2 compatibility
-
--- Vertica (both ISNULL and COALESCE are supported; COALESCE is ANSI standard and preferred)
-SELECT ISNULL(middle_name, 'N/A') FROM employees;
-SELECT COALESCE(middle_name, 'N/A') FROM employees;
-```
-
 ### Special Registers and System Tables
 
 ```sql
--- DB2
-SELECT CURRENT_SCHEMA FROM sysibm.sysdummy1;
+-- DB2 (using sysibm.sysdummy1)
+SELECT CURRENT SCHEMA FROM sysibm.sysdummy1;
 SELECT CURRENT TIMESTAMP FROM sysibm.sysdummy1;
-SELECT * FROM sysibm.systables WHERE table_type = 'T';
+SELECT CURRENT DATE FROM sysibm.sysdummy1;
+SELECT CURRENT TIME FROM sysibm.sysdummy1;
 
--- Vertica
+-- Vertica (no table needed)
 SELECT CURRENT_SCHEMA;
 SELECT CURRENT_TIMESTAMP;
-SELECT * FROM v_catalog.tables;
+SELECT CURRENT_DATE;
+SELECT CURRENT_TIME;
 ```
 
 ## Data Type Mappings
 
-### Numeric Types
-
-| DB2 Type | Vertica Type | Notes |
-|----------|--------------|-------|
-| SMALLINT | SMALLINT | **8 bytes** in Vertica (2-byte integer in DB2) |
-| INTEGER | INTEGER | **8 bytes** in Vertica (4-byte integer in DB2) |
-| BIGINT | BIGINT | 8-byte integer |
-| DECIMAL(p,s) | NUMERIC(p,s) | Fixed precision decimal |
-| DECFLOAT | DOUBLE PRECISION | Floating point |
-| REAL | REAL | **8 bytes** in Vertica(4-byte2 floating point integer in DB2) |
-| DOUBLE | DOUBLE PRECISION | 8-byte floating point |
-| DEC(p,s) | NUMERIC(p,s) | Same as DECIMAL |
-
-### Character Types
-
-| DB2 Type | Vertica Type | Notes |
-|----------|--------------|-------|
-| CHAR(n) | CHAR(n) | Fixed-length character |
-| VARCHAR(n) | VARCHAR(n) | Variable-length character |
-| VARCHAR(32672) | VARCHAR(65000) | Adjust to Vertica limits |
-| CLOB | LONG VARCHAR | Large text (up to 32MB) |
-| GRAPHIC(n) | CHAR(n) | DBCS character |
-| VARGRAPHIC(n) | VARCHAR(n) | Variable DBCS |
-| DBCLOB | LONG VARCHAR | Large DBCS text |
-
-### Date/Time Types
-
-| DB2 Type | Vertica Type | Notes |
-|----------|--------------|-------|
-| DATE | DATE | Date only |
-| TIME | TIME | Time only |
-| TIMESTAMP | TIMESTAMP | Date and time |
-| TIMESTAMP(p) | TIMESTAMP(p) | Precision matching |
-
-### Binary Types
-
-| DB2 Type | Vertica Type | Notes |
-|----------|--------------|-------|
-| BINARY(n) | BINARY(n) | Fixed-length binary |
-| VARBINARY(n) | VARBINARY(n) | Variable-length binary |
-| BLOB | LONG VARBINARY | Large binary objects |
-
-### Other Types
-
-| DB2 Type | Vertica Type | Notes |
-|----------|--------------|-------|
-| BOOLEAN | BOOLEAN | True/False values |
-| XML | LONG VARCHAR | Store as text |
-| ROWID | VARCHAR(64) | Row identifier |
+> **See [Data Type Mapping Guide](data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
 ## Function Conversions
 
-### String Functions
-
-```sql
--- DB2 SUBSTR
-SELECT SUBSTR(name, 1, 10) FROM employees;
-
--- Vertica SUBSTR (same syntax)
-SELECT SUBSTR(name, 1, 10) FROM employees;
-
--- DB2 LOCATE
-SELECT LOCATE('test', description) FROM products;
-
--- Vertica POSITION
-SELECT POSITION('test' IN description) FROM products;
-
--- DB2 REPLACE (same in Vertica)
-SELECT REPLACE(name, 'old', 'new') FROM employees;
-
--- DB2 UPPER/LOWER (same in Vertica)
-SELECT UPPER(name), LOWER(name) FROM employees;
-
--- DB2 TRIM (same in Vertica)
-SELECT TRIM(BOTH ' ' FROM name) FROM employees;
-
--- DB2 CONCAT (same in Vertica)
-SELECT CONCAT(first_name, last_name) FROM employees;
-```
-
-### Date Functions
-
-```sql
--- DB2 CURRENT TIMESTAMP
-SELECT CURRENT_TIMESTAMP FROM sysibm.sysdummy1;
-
--- Vertica (same syntax, also NOW())
-SELECT NOW();
-
--- DB2 DATE arithmetic
-SELECT hire_date + 30 DAYS FROM employees;
-SELECT hire_date - 6 MONTHS FROM employees;
-
--- Vertica DATE arithmetic
-SELECT hire_date + INTERVAL '30 days' FROM employees;
-SELECT hire_date - INTERVAL '6 months' FROM employees;
-
--- DB2 YEAR, MONTH, DAY functions
-SELECT YEAR(hire_date), MONTH(hire_date), DAY(hire_date) FROM employees;
-
--- Vertica (same syntax, also EXTRACT)
-SELECT EXTRACT(YEAR FROM hire_date), EXTRACT(MONTH FROM hire_date), EXTRACT(DAY FROM hire_date) FROM employees;
-
--- DB2 DAYS_BETWEEN (DB2 11.1+)
-SELECT DAYS_BETWEEN(CURRENT DATE, hire_date) FROM employees;
-
--- Vertica DATE difference
-SELECT CURRENT_DATE - hire_date FROM employees;
-```
-
-### Aggregate Functions
-
-```sql
--- DB2 MEDIAN (DB2 11.1+)
-SELECT MEDIAN(salary) FROM employees;
-
--- Vertica MEDIAN (analytic function)
-SELECT MEDIAN(salary) OVER () FROM employees;
-
--- DB2 LISTAGG
-SELECT LISTAGG(name, ', ') WITHIN GROUP (ORDER BY name) FROM departments;
-
--- Vertica LISTAGG
-SELECT LISTAGG(name USING PARAMETERS separator=', ') FROM departments;
-
--- DB2 XMLAGG (convert to LISTAGG)
-SELECT XMLAGG(XMLELEMENT(NAME "e", name) ORDER BY name) FROM employees;
-
--- Vertica LISTAGG
-SELECT LISTAGG(name) FROM employees;
-```
-
-### Type Conversion Functions
-
-```sql
--- DB2 CAST
-SELECT CAST(salary AS VARCHAR(20)) FROM employees;
-
--- Vertica CAST (same syntax)
-SELECT CAST(salary AS VARCHAR(20)) FROM employees;
-
--- DB2 DECIMAL
-SELECT DECIMAL(salary, 10, 2) FROM employees;
-
--- Vertica CAST
-SELECT CAST(salary AS NUMERIC(10,2)) FROM employees;
-
--- DB2 CHAR/INTEGER
-SELECT CHAR(hire_date) FROM employees;
-SELECT INTEGER(salary) FROM employees;
-
--- Vertica CAST
-SELECT CAST(hire_date AS VARCHAR) FROM employees;
-SELECT CAST(salary AS INTEGER) FROM employees;
-```
+> **See [Function Mapping Guide](function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ## PL/SQL to PL/vSQL Migration
 
@@ -293,7 +80,7 @@ Vertica PL/vSQL has the following restrictions on variable data types that diffe
 | `DECFLOAT` type | ✅ Supported | Not supported. Use `DOUBLE PRECISION` or `NUMERIC` instead. |
 | `GRAPHIC` / `VARGRAPHIC` / `DBCLOB` types | ✅ Supported | Not supported. Use `VARCHAR` instead. |
 | `XML` type | ✅ Supported | Not supported. Use `LONG VARCHAR` or `LONG VARBINARY` instead. |
-| `ROW` type (structured) | ✅ Supported | Not supported. Use individual scalar variables. |
+| `ROW` type (structured) | ✅ Supported | Not supported. Use individual scalar variables. See [Stored Procedures Guide](stored-procedures-guide.md#parameter-type-limitations) |
 
 
 ### Critical Parameter Handling Rules

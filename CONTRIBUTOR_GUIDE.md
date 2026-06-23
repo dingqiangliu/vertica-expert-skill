@@ -174,10 +174,12 @@ done
 > **MANDATORY**: Read [Generic Migration Guide](generic-migration-guide.md) FIRST
 
 ## Data Type Mapping
-[Database] Type → Vertica Type conversion table
+> **See [Data Type Mapping Guide](data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
-## Function Mapping
-[Database] Function → Vertica Function mapping table
+## Function Conversions
+> **See [Function Mapping Guide](function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ## SQL Syntax Conversion
 Key syntax differences and conversion examples
@@ -191,6 +193,24 @@ Database-specific features and handling
 ## Examples
 Migration examples and test cases
 ```
+
+> **⚠️ CRITICAL: Reference Document Consistency**
+> 
+> **DO NOT** duplicate content from reference documents in this document:
+> - **Data Type Mapping**: All type mappings MUST be centralized in `data-type-mapping.md` (Level 1)
+> - **Function Mapping**: All function mappings MUST be centralized in `function-mapping.md` (Level 1)
+> 
+> This document should ONLY contain:
+> - Reference links to `data-type-mapping.md` and `function-mapping.md` (as shown above)
+> - Syntax differences (not type or function mappings)
+> - Database-specific examples
+> 
+> **Rationale**: Reference documents are loaded for EVERY migration task. Duplicating
+> content wastes context and creates maintenance burden. Centralizing ensures single
+> source of truth and easier updates.
+> 
+> **Summary documents** (`reference-summaries/[database]-migration-summary.md`) should
+> only include syntax differences and commands NOT in reference documents.
 
 ---
 

@@ -55,71 +55,13 @@ RIGHT JOIN departments d ON e.dept_id = d.dept_id;
 
 ## Data Type Mappings
 
-### Numeric Types
-
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| NUMBER(1-9) | INTEGER | **8 bytes** in Vertica (4-byte integer in Oracle) |
-| NUMBER(10-18) | BIGINT | 8-byte integer |
-| NUMBER(>18) | NUMBER(p,s), or NUMERIC(p,s) | Variable precision |
-| NUMBER(p,s) | NUMBER(p,s), or NUMERIC(p,s) | Same precision/scale |
-| FLOAT | DOUBLE PRECISION | 8-byte floating point |
-
-### Character Types
-
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| VARCHAR2(n) | VARCHAR2(n), or VARCHAR(n) | Same functionality |
-| CHAR(n) | CHAR(n) | Fixed length |
-| CLOB | LONG VARCHAR | Up to 32MB |
-| NCLOB | LONG VARCHAR | Vertica is Unicode by default |
-
-### Date/Time Types
-
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| DATE | TIMESTAMP | Includes time component |
-| TIMESTAMP | TIMESTAMP | Same precision |
-| TIMESTAMP WITH TIME ZONE | TIMESTAMP WITH TIME ZONE | Timezone support |
-
-### Binary Types
-
-| Oracle Type | Vertica Type | Notes |
-|-------------|--------------|-------|
-| RAW(n) | VARBINARY(n) | Binary data |
-| BLOB | LONG VARBINARY | Large binary objects |
+> **See [Data Type Mapping Guide](data-type-mapping.md)** for complete data type mappings.
+> Load on-demand: `grep -n "^## \|^### " references/data-type-mapping.md` → `Read offset=N limit=M`
 
 ## Function Conversions
 
-### String Functions
-
-```sql
-
-```
-
-### Date Functions
-
-```sql
-
-```
-
-### Aggregate Functions
-
-```sql
--- Oracle MEDIAN
-SELECT MEDIAN(salary) FROM employees;
-
--- Vertica MEDIAN (analytic function)
-SELECT MEDIAN(salary) OVER ()
-FROM employees;
-
--- Oracle LISTAGG
-SELECT LISTAGG(name, ', ') WITHIN GROUP (ORDER BY name)
-FROM departments;
-
--- Vertica LISTAGG
-SELECT LISTAGG(name USING PARAMETERS separator=', ') FROM departments;
-```
+> **See [Function Mapping Guide](function-mapping.md)** for function conversions across databases.
+> Load on-demand: `grep -n "^## \|^### " references/function-mapping.md` → `Read offset=N limit=M`
 
 ## PL/SQL to PL/vSQL Migration
 

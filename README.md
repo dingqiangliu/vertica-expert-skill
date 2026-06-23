@@ -26,7 +26,7 @@ vertica-expert-skill/
 │   ├── user-defined-sql-functions-guide.md # User-Defined SQL Functions
 │   ├── stored-procedures-guide.md          # PL/vSQL development
 │   ├── udx-development-guide.md            # Custom function development (C++, Python, Java, R)
-│   ├── data-types.md                       # Data type optimization
+│   ├── data-type-mapping.md                # Data type mapping guide
 │   ├── function-mapping.md                 # Function conversion guide
 │   ├── query-optimization.md               # Performance optimization
 │   ├── migration-guides-overview.md        # Guide hierarchy and usage instructions
@@ -43,7 +43,6 @@ vertica-expert-skill/
 │   └── reference-summaries/               # 📚 Agent-optimized reference summaries
 │       ├── generic-migration-summary.md   # Generic migration requirements (agent-optimized)
 │       ├── sql-syntax-summary.md          # SQL syntax reference (agent-optimized)
-│       ├── data-types-summary.md           # Data types (agent-optimized)
 │       ├── oltp-to-olap-summary.md        # OLTP→OLAP rewrite patterns (agent-optimized)
 │       ├── stored-procedures-summary.md   # Stored procedures guide (agent-optimized)
 │       ├── user-defined-sql-functions-guide.md     # SQL functions guide
@@ -358,7 +357,7 @@ The Manager agent saves its state to `manager_state.md` (in current working dire
   - Database-specific migration guide summaries (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
   - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
   - [Function Mapping Guide](references/function-mapping.md)
-  - [Data Types](references/reference-summaries/data-types-summary.md)
+  - [Data Type Mapping Guide](references/data-type-mapping.md)
   - [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md)
   - [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md)
 

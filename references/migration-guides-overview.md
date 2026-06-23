@@ -51,7 +51,7 @@ All migration guides follow this documentation priority:
 2. **[OLTP to OLAP Rewrite Guide](oltp-to-olap-rewrite-guide.md)** - **ESSENTIAL** for all migrations involving procedural/OLTP code
 3. **[SQL Syntax Reference](sql-syntax-reference.md)**
 4. **[Function Mapping Guide](function-mapping.md)**
-5. **[Data Types](data-types.md)**
+5. **[Data Type Mapping Guide](data-type-mapping.md)**
 6. **[User-Defined SQL Functions Guide](user-defined-sql-functions-guide.md)**
 7. **[Stored Procedures Guide](stored-procedures-guide.md)**
 8. **[UDx Development Guide](udx-development-guide.md)**

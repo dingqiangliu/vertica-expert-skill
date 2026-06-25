@@ -82,7 +82,7 @@ Before starting ANY migration, complete ALL of these steps **in order**:
 
 | Object Type | Action |
 |-------------|--------|
-| Tables | Migrate with all constraints (PK, FK, UNIQUE, CHECK) |
+| Tables | Migrate with all constraints (PK, FK, UNIQUE, CHECK). Do NOT add `SEGMENTED BY` or `UNSEGMENTED` clauses to CREATE TABLE statements — these are designed separately by Vertica DBA |
 | Views | Migrate (including materialized views). **Vertica fully supports `ORDER BY` in view definitions, and the sorting takes effect.** Do NOT remove `ORDER BY` from view definitions during migration if `TOP` or `LIMIT` appears together with `ORDER BY`. Some source databases ignore `ORDER BY` in views, so applications use `TOP (100) PERCENT` alongside `ORDER BY` to force it to work — preserve the `ORDER BY` when migrating such views. |
 | Stored Procedures | Convert to PL/vSQL |
 | Functions | Convert to SQL functions or PL/vSQL procedures |
@@ -301,8 +301,9 @@ The OLTP-to-OLAP rewrite **MUST** be performed **step-by-step and block-by-block
 - ✅ **NEVER** automatically create projections based on source database indexes and queries
 - ✅ Projections should be designed separately based on query patterns by Vertica DBA or manually
 - ✅ Use `CREATE PROJECTION` statements explicitly when needed
+- ✅ **NEVER** add `SEGMENTED BY` or `UNSEGMENTED` clauses to CREATE TABLE statements — Do NOT add `SEGMENTED BY` or `UNSEGMENTED` clauses to CREATE TABLE statements — these are designed separately by Vertica DBA
 
-**Rationale:** Index-based projections are often not optimal for Vertica's columnar architecture.
+**Rationale:** Index-based projections are often not optimal for Vertica's columnar architecture. Segmentation expressions are projection-specific optimizations that should not be embedded in table DDL by guessing.
 
 ---
 

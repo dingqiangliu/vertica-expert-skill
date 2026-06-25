@@ -49,7 +49,7 @@ When test fails: **NEVER ASSUME** unsupported — verify → consult docs → re
 
 | Object Type | Action |
 |-------------|--------|
-| Tables | Migrate with all constraints (PK, FK, UNIQUE, CHECK). **Comment out `ON DELETE CASCADE` (not supported in Vertica)** |
+| Tables | Migrate with all constraints (PK, FK, UNIQUE, CHECK). **Comment out `ON DELETE CASCADE` (not supported in Vertica)**. Do NOT add `SEGMENTED BY` or `UNSEGMENTED` clauses to CREATE TABLE statements — these are designed separately by Vertica DBA |
 | Views | Migrate (including materialized views). **Preserve `ORDER BY` when `TOP` or `LIMIT` appears with `ORDER BY`** |
 | Stored Procedures | Convert to PL/vSQL |
 | Functions | **SQL functions = SINGLE EXPRESSION ONLY** (no queries/loops). Complex logic → PL/vSQL procedure or UDx |

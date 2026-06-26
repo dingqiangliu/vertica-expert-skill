@@ -182,6 +182,61 @@ LEAD(col, n, default) OVER (ORDER BY col)
 COUNT(*) OVER ([PARTITION BY col] ORDER BY col)
 ```
 
+### Time Series Analytics
+
+**TIMESERIES clause** — gap-filling and interpolation:
+```sql
+SELECT slice_time, TS_FIRST_VALUE(bid), TS_LAST_VALUE(bid)
+FROM TickStore
+TIMESERIES slice_time AS '3 seconds' OVER (PARTITION BY symbol ORDER BY ts);
+```
+- `TS_FIRST_VALUE(expr)` / `TS_LAST_VALUE(expr)` — time series aggregates
+- Interpolation: `'CONST'` (carry forward, default) or `'LINEAR'`
+- Cannot use `GROUP BY`/`HAVING` in same block; `slice_time` not in `WHERE`
+
+**TIME_SLICE function** — aligns timestamps without gap-filling:
+```sql
+TIME_SLICE(timestamp, length [, 'unit' [, 'start-or-end']])
+```
+
+### Event-Based Windows
+
+```sql
+-- Window ID increments when value changes
+CONDITIONAL_CHANGE_EVENT(expr) OVER (ORDER BY col)
+-- Window ID increments when condition is TRUE
+CONDITIONAL_TRUE_EVENT(boolean_expr) OVER (ORDER BY col)
+```
+Can combine with `LAG()` for change detection. No window framing support.
+
+### Sessionization
+
+```sql
+-- Using CONDITIONAL_TRUE_EVENT
+CONDITIONAL_TRUE_EVENT(timestamp - LAG(timestamp) > '30 seconds')
+    OVER (PARTITION BY userId ORDER BY timestamp) AS session
+-- Using SESSIONIZE function
+SESSIONIZE(timestamp, '30 seconds') OVER (PARTITION BY userId ORDER BY timestamp)
+```
+
+### Event Series Pattern Matching (MATCH Clause)
+
+```sql
+SELECT uid, event_name(), pattern_id(), match_id()
+FROM clickstream_log
+MATCH (
+    PARTITION BY uid ORDER BY ts
+    DEFINE
+        Entry    AS RefURL NOT ILIKE '%site%' AND PageURL ILIKE '%site%',
+        Purchase AS PageURL ILIKE '%site%' AND Action = 'P'
+    PATTERN P AS (Entry* Purchase)
+    ROWS MATCH FIRST EVENT
+);
+```
+- Pattern quantifiers: `*`, `+`, `?`, `|`, non-greedy variants (`*?`, `+?`, `??`)
+- Functions: `event_name()`, `pattern_id()`, `match_id()`
+- Max 52 events; no subqueries/aggregates in DEFINE
+
 ### Common Table Expressions (CTE)
 
 ```sql

@@ -1842,6 +1842,165 @@ SELECT
 FROM products;
 ```
 
+### Time Series Analytics
+
+Vertica's `TIMESERIES` clause provides gap-filling and interpolation (GFI) for time series data. It fills missing time slices and interpolates values using constant or linear schemes.
+
+**Syntax:**
+```sql
+SELECT ...
+FROM table
+TIMESERIES slice_time AS 'interval' OVER (
+    [ PARTITION BY col ] ORDER BY timestamp_col
+)
+```
+
+**Time series aggregate functions:**
+- `TS_FIRST_VALUE(expr)` — value at start of time slice
+- `TS_LAST_VALUE(expr)` — value at end of time slice
+- Both support `'CONST'` (default, carry forward) and `'LINEAR'` interpolation
+
+**Example — constant interpolation:**
+```sql
+SELECT slice_time, symbol, TS_FIRST_VALUE(bid) AS first_bid
+FROM TickStore
+TIMESERIES slice_time AS '3 seconds' OVER (PARTITION BY symbol ORDER BY ts);
+```
+
+**Example — linear interpolation:**
+```sql
+SELECT slice_time, symbol, TS_LAST_VALUE(bid, 'LINEAR') AS last_bid_linear
+FROM TickStore
+TIMESERIES slice_time AS '2 seconds' OVER (PARTITION BY symbol ORDER BY ts);
+```
+
+**Multiple TSA functions with different interpolation:**
+```sql
+SELECT slice_time, symbol,
+    TS_FIRST_VALUE(bid, 'const') AS fv_const,
+    TS_FIRST_VALUE(bid, 'linear') AS fv_linear,
+    TS_LAST_VALUE(bid, 'const') AS lv_const
+FROM TickStore
+TIMESERIES slice_time AS '3 seconds' OVER (PARTITION BY symbol ORDER BY ts);
+```
+
+**Restrictions:**
+- Cannot use `GROUP BY` or `HAVING` in the same query block (use subquery)
+- `slice_time` cannot appear in `WHERE` (wrap in subquery to filter)
+- Only supports `DAY TO SECOND` interval qualifiers
+
+**TIME_SLICE function** (aligns timestamps without gap-filling):
+```sql
+SELECT TIME_SLICE('2009-09-19 00:00:01', 3);  -- → 2009-09-19 00:00:00
+SELECT TIME_SLICE('2009-09-19 00:00:01', 3, 'SECOND', 'END');  -- → 2009-09-19 00:00:03
+```
+
+### Event-Based Windows
+
+Event-based windows break time series data into windows that border on significant events. Two functions:
+
+**`CONDITIONAL_CHANGE_EVENT(expr)`** — increments window ID when the expression value changes from the previous row:
+```sql
+SELECT ts, symbol, bid,
+    CONDITIONAL_CHANGE_EVENT(bid) OVER (ORDER BY ts) AS window_id
+FROM TickStore3;
+```
+
+**`CONDITIONAL_TRUE_EVENT(boolean_expr)`** — increments window ID when the expression evaluates to TRUE:
+```sql
+SELECT ts, symbol, bid,
+    CONDITIONAL_TRUE_EVENT(bid > 10.6) OVER (ORDER BY ts) AS window_id
+FROM TickStore3;
+```
+
+**Advanced: combine with LAG for change detection:**
+```sql
+SELECT ts, bid,
+    CONDITIONAL_TRUE_EVENT(bid < LAG(bid)) OVER (ORDER BY ts) AS decline_event
+FROM TickStore3;
+```
+
+**Note:** Event-based window functions do not support window framing (`ROWS BETWEEN`).
+
+### Sessionization
+
+Sessionization is a special case of event-based windows that groups events into sessions based on a time-out threshold. Commonly used for clickstream analysis.
+
+**Using CONDITIONAL_TRUE_EVENT:**
+```sql
+SELECT userId, timestamp,
+    CONDITIONAL_TRUE_EVENT(timestamp - LAG(timestamp) > '30 seconds')
+    OVER (PARTITION BY userId ORDER BY timestamp) AS session
+FROM WebClicks;
+```
+
+**Using SESSIONIZE function (simpler syntax):**
+```sql
+SELECT SESSIONIZE(timestamp, '30 seconds')
+    OVER (PARTITION BY userId ORDER BY timestamp) AS session_id
+FROM WebClicks;
+```
+
+**Adaptive timeout (based on average of last 2 clicks + 3s grace):**
+```sql
+SELECT userId, timestamp,
+    CONDITIONAL_TRUE_EVENT(
+        timestamp - LAG(timestamp) >
+        (LAG(timestamp, 1) - LAG(timestamp, 3)) / 2 + '3 seconds'
+    ) OVER (PARTITION BY userId ORDER BY timestamp) AS session
+FROM WebClicks;
+```
+
+### Event Series Pattern Matching (MATCH Clause)
+
+The `MATCH` clause searches for event patterns in historical data using regular expressions. Useful for clickstream funnel analysis.
+
+**Syntax:**
+```sql
+SELECT ...
+FROM table
+MATCH (
+    PARTITION BY col ORDER BY col
+    DEFINE event1 AS boolean_expr, event2 AS boolean_expr, ...
+    PATTERN pattern_name AS (event1 event2* event3)
+    [ ROWS MATCH FIRST EVENT ]
+)
+```
+
+**Pattern quantifiers:**
+| Quantifier | Meaning |
+|-----------|---------|
+| `*` | 0 or more (greedy) |
+| `+` | 1 or more (greedy) |
+| `?` | 0 or 1 (greedy) |
+| `*?` `+?` `??` | Non-greedy variants |
+| `\|` | Alternation (OR) |
+
+**MATCH functions:**
+- `event_name()` — name of the matched event
+- `pattern_id()` — sequential pattern instance number
+- `match_id()` — globally unique match identifier
+
+**Example — clickstream funnel:**
+```sql
+SELECT uid, ts, event_name(), pattern_id(), match_id()
+FROM clickstream_log
+MATCH (
+    PARTITION BY uid ORDER BY ts
+    DEFINE
+        Entry    AS RefURL NOT ILIKE '%site%' AND PageURL ILIKE '%site%',
+        Onsite   AS PageURL ILIKE '%site%' AND Action = 'V',
+        Purchase AS PageURL ILIKE '%site%' AND Action = 'P'
+    PATTERN P AS (Entry Onsite* Purchase)
+    ROWS MATCH FIRST EVENT
+);
+```
+
+**Restrictions:**
+- `DISTINCT`, `GROUP BY`, `HAVING` not allowed in MATCH queries
+- No subqueries, analytic functions, or aggregate functions in `DEFINE`
+- Maximum 52 events per `DEFINE` clause
+
 ## PostgreSQL Compatibility (pgcompat)
 
 Vertica's `pgcompat` extension package provides PostgreSQL-compatible functions, types, and system catalog views. **It is not installed by default.**

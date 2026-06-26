@@ -184,15 +184,15 @@ add_text_box(slide, Inches(1.2), Inches(3.0), Inches(8), Inches(1.0),
              "Comprehensive Skill for Database Migration & Development",
              font_size=24, color=ACCENT_BLUE)
 add_text_box(slide, Inches(1.2), Inches(4.3), Inches(8), Inches(1.5),
-             "SQL Syntax  •  Stored Procedures  •  UDx  •  Machine Learning\nOracle / DB2 / SQL Server / PostgreSQL / MySQL → Vertica",
+             "SQL Syntax  •  Stored Procedures  •  UDx  •  Machine Learning\nOracle / DB2 / SQL Server / PostgreSQL / MySQL / Teradata → Vertica",
              font_size=16, color=RGBColor(0xAA, 0xBB, 0xCC))
 
 badge_x = Inches(9.5)
 badges = [
-    ("5", "Migration Paths", ORANGE),
+    ("6", "Migration Paths", ORANGE),
     ("100+", "Function Mappings", GREEN),
     ("7", "ML Algorithms", TEAL),
-    ("18", "Reference Guides", PURPLE),
+    ("19", "Reference Guides", PURPLE),
 ]
 for i, (num, label, color) in enumerate(badges):
     y_pos = Inches(1.2 + i * 1.3)
@@ -215,7 +215,7 @@ add_text_box(slide, Inches(0.5), Inches(1.3), Inches(12.3), Inches(0.8),
              font_size=13, color=DARK_TEXT)
 
 capabilities = [
-    ("🔄", "Database Migration", "Convert DDL, DML, stored procedures, and queries from Oracle, DB2, SQL Server, PostgreSQL, and MySQL to native Vertica syntax"),
+    ("🔄", "Database Migration", "Convert DDL, DML, stored procedures, and queries from Oracle, DB2, SQL Server, PostgreSQL, MySQL, and Teradata to native Vertica syntax"),
     ("⚡", "Performance Optimization", "Design projections, encoding strategies, and resource management for maximum columnar performance"),
     ("🤖", "Machine Learning", "Implement end-to-end in-database ML workflows — regression, classification, clustering, and time series"),
     ("🔧", "UDx Development", "Build custom scalar, aggregate, analytic, and transform functions in C++, Python, Java, or R"),
@@ -251,19 +251,22 @@ paths = [
     ("SQL Server", "→ Vertica", "T-SQL → Vertica SQL\nIdentity columns\nCursor alternatives", TEAL, SOFT_TEAL),
     ("PostgreSQL", "→ Vertica", "PL/pgSQL → PL/vSQL\nArray & JSON handling\nFunction mapping", PURPLE, SOFT_PURPLE),
     ("MySQL", "→ Vertica", "Schema & query conversion\nAUTO_INCREMENT → IDENTITY\nStorage engine mapping", RED, SOFT_RED),
+    ("Teradata", "→ Vertica", "SPL → PL/vSQL\nQUALIFY → LIMIT OVER\nBTEQ → VSQL\nPRIMARY INDEX → SEGMENTED BY HASH", DARK_BLUE, SOFT_BLUE),
 ]
 
 for i, (source, arrow, details, accent, bg) in enumerate(paths):
-    x = Inches(0.5 + i * 2.55)
-    y = Inches(1.4)
-    w = Inches(2.4)
-    card = add_shape(slide, x, y, w, Inches(5.2), bg, border_color=accent, border_width=Pt(2))
-    add_text_box(slide, x, y + Inches(0.3), w, Inches(0.5), source,
-                font_size=18, color=DARK_BLUE, bold=True, alignment=PP_ALIGN.CENTER)
-    add_text_box(slide, x, y + Inches(0.75), w, Inches(0.4), arrow,
-                font_size=20, color=accent, bold=True, alignment=PP_ALIGN.CENTER)
-    add_text_box(slide, x + Inches(0.15), y + Inches(1.3), w - Inches(0.3), Inches(3.5),
-                details, font_size=11, color=MEDIUM_TEXT, alignment=PP_ALIGN.CENTER)
+    col = i % 3
+    row = i // 3
+    x = Inches(0.5 + col * 4.15)
+    y = Inches(1.4 + row * 2.7)
+    w = Inches(4.0)
+    card = add_shape(slide, x, y, w, Inches(2.4), bg, border_color=accent, border_width=Pt(2))
+    add_text_box(slide, x, y + Inches(0.2), w, Inches(0.4), source,
+                font_size=16, color=DARK_BLUE, bold=True, alignment=PP_ALIGN.CENTER)
+    add_text_box(slide, x, y + Inches(0.6), w, Inches(0.3), arrow,
+                font_size=18, color=accent, bold=True, alignment=PP_ALIGN.CENTER)
+    add_text_box(slide, x + Inches(0.15), y + Inches(1.0), w - Inches(0.3), Inches(1.2),
+                details, font_size=10, color=MEDIUM_TEXT, alignment=PP_ALIGN.CENTER)
 
 add_footer(slide)
 
@@ -511,7 +514,7 @@ add_text_box(slide, Inches(0.7), Inches(2.05), Inches(12), Inches(0.5),
 guides = [
     ("SQL Syntax Reference", "Complete Vertica SQL syntax: DDL, DML, queries, CTEs, window functions", DARK_BLUE),
     ("Data Types", "Data type mapping & optimization across all source databases", DARK_BLUE),
-    ("Function Mapping Guide", "100+ function conversions: Oracle, DB2, SQL Server, PostgreSQL, MySQL", DARK_BLUE),
+    ("Function Mapping Guide", "100+ function conversions: Oracle, DB2, SQL Server, PostgreSQL, MySQL, Teradata", DARK_BLUE),
     ("User-Defined SQL Functions", "CREATE FUNCTION syntax, examples, overloading, and management", DARK_BLUE),
     ("Stored Procedures Guide", "PL/vSQL development: parameters, control structures, exception handling", DARK_BLUE),
     ("UDx Development Guide", "Custom functions in C++, Python, Java, R for scalar, aggregate, analytic, transform", DARK_BLUE),
@@ -1477,12 +1480,12 @@ add_text_box(slide, Inches(0.5), Inches(0.3), Inches(12.3), Inches(0.8),
              "Summary & Key Takeaways", font_size=36, color=WHITE, bold=True, alignment=PP_ALIGN.CENTER)
 
 takeaways = [
-    ("5", "Migration Paths", "Oracle, DB2, SQL Server, PostgreSQL, MySQL → Vertica", ORANGE),
+    ("6", "Migration Paths", "Oracle, DB2, SQL Server, PostgreSQL, MySQL, Teradata → Vertica", ORANGE),
     ("100+", "Function Mappings", "Complete function conversion across all source databases", GREEN),
     ("5", "OLTP→OLAP Patterns", "Rewrite procedural code to set-based SQL for columnar performance", TEAL),
     ("4", "UDx Languages", "C++, Python, Java, R for custom function development", PURPLE),
     ("4", "ML Categories", "Regression, classification, clustering, time series", RED),
-    ("18", "Reference Guides", "Comprehensive documentation for every aspect", ACCENT_BLUE),
+    ("19", "Reference Guides", "Comprehensive documentation for every aspect", ACCENT_BLUE),
 ]
 
 for i, (num, title, desc, color) in enumerate(takeaways):

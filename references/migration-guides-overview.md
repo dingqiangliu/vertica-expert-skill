@@ -43,6 +43,12 @@ This document provides an overview of all database migration guides and their hi
 - **Key Topics**: AUTO_INCREMENT to IDENTITY, storage engine differences
 - **References Generic Guide**: ✅ **MANDATORY COMPLIANCE SECTION**
 
+#### [Teradata to Vertica Migration Guide](teradata-migration.md)
+- **Source**: Teradata
+- **Focus**: SPL to PL/vSQL conversion, Teradata-specific features
+- **Key Topics**: QUALIFY to LIMIT OVER, PRIMARY INDEX to SEGMENTED BY HASH, BTEQ to VSQL, volatile tables, macros
+- **References Generic Guide**: ✅ **MANDATORY COMPLIANCE SECTION**
+
 ## 🔗 Reference Documentation Priority Order
 
 All migration guides follow this documentation priority:
@@ -147,6 +153,17 @@ All specific migration guides MUST enforce these requirements:
 4. Follow all mandatory procedures from Generic Guide
 5. Apply MySQL-specific conversion rules
 6. Rewrite procedural loops/cursors using OLTP-to-OLAP patterns
+7. Test every object individually
+```
+
+### For Teradata Migrations
+```
+1. Read [Generic Migration Guide](generic-migration-guide.md) FIRST
+2. Read [OLTP to OLAP Rewrite Guide](oltp-to-olap-rewrite-guide.md) for procedural code
+3. Then use [Teradata Migration Guide](teradata-migration.md)
+4. Follow all mandatory procedures from Generic Guide
+5. Apply Teradata-specific conversion rules
+6. Rewrite QUALIFY as LIMIT OVER, BTEQ as VSQL, volatile tables as LOCAL TEMP
 7. Test every object individually
 ```
 

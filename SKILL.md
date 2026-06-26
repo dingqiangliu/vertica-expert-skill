@@ -1,6 +1,6 @@
 ---
 name: vertica-expert
-description: Comprehensive skill for Vertica database migration and development. Includes SQL syntax reference, custom SQL function development, PL/vSQL stored procedure development, UDx custom function creation (C++, Python, Java, R), in-database machine learning (regression, classification, clustering, time series), performance optimization, and migration from Oracle, DB2, SQL Server, PostgreSQL, and MySQL. Use this skill for writing Vertica SQL, developing stored procedures, creating custom functions, implementing machine learning workflows, optimizing performance, or migrating from other databases. Features Multi-Agent Migration Workflow with Manager, Requester, Migrator, and Tester agents for large-scale migrations to ensure rule adherence and context management.
+description: Comprehensive skill for Vertica database migration and development. Includes SQL syntax reference, custom SQL function development, PL/vSQL stored procedure development, UDx custom function creation (C++, Python, Java, R), in-database machine learning (regression, classification, clustering, time series), performance optimization, and migration from Oracle, DB2, SQL Server, PostgreSQL, MySQL, and Teradata. Use this skill for writing Vertica SQL, developing stored procedures, creating custom functions, implementing machine learning workflows, optimizing performance, or migrating from other databases. Features Multi-Agent Migration Workflow with Manager, Requester, Migrator, and Tester agents for large-scale migrations to ensure rule adherence and context management.
 ---
 
 # Vertica Expert
@@ -27,7 +27,7 @@ This skill provides comprehensive guidance for migrating from other database sys
 
 **⚠️ ABSOLUTE RULE ⚠️**
 
-**For ANY migration task (Oracle, DB2, SQL Server, PostgreSQL, MySQL → Vertica):**
+**For ANY migration task (Oracle, DB2, SQL Server, PostgreSQL, MySQL, Teradata → Vertica):**
 - **NEVER READ THE ENTIRE SOURCE FILE IN ONE GO** - this applies to ALL migration workflows
 - **NEVER LOAD FULL FILE CONTENT INTO CONTEXT** before understanding the scope
 
@@ -48,6 +48,7 @@ This skill provides comprehensive guidance for migrating from other database sys
 - **SQL Server** → Vertica (T-SQL to Vertica SQL)
 - **PostgreSQL** → Vertica (PL/pgSQL to PL/vSQL)
 - **MySQL** → Vertica
+- **Teradata** → Vertica (SPL to PL/vSQL, BTEQ to VSQL)
 - **Generic SQL** → Vertica optimizations
 
 ### Key Capabilities
@@ -186,6 +187,7 @@ For optimizing existing queries:
      - [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md)
      - [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md)
      - [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md)
+    - [Teradata Migration Guide](references/reference-summaries/teradata-migration-summary.md)
 3. **Load additional documents on-demand** (only when needed, from the vertica-expert skill):
    - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) — ONLY for stored procedures or adjacent single-row DML
    - [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md) — ONLY for stored procedures
@@ -282,6 +284,7 @@ For optimizing existing queries:
     - [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md)
     - [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md)
     - [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md)
+    - [Teradata Migration Guide](references/reference-summaries/teradata-migration-summary.md)
 
 - **Load On-Demand:**
   - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) — ONLY for stored procedures or adjacent single-row DML
@@ -340,6 +343,7 @@ Provide: (1) Source database type, (2) Source files list, (3) Target file path
 - [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md) - T-SQL to Vertica SQL
 - [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md) - PL/pgSQL to PL/vSQL
 - [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md) - MySQL to Vertica
+- [Teradata Migration Guide](references/reference-summaries/teradata-migration-summary.md) - Teradata SPL to PL/vSQL
 
 **OLTP to OLAP Rewrite:**
 - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) - **ESSENTIAL** for stored procedures  or adjacent single-row DML. Contains 5 rewrite patterns with before/after examples

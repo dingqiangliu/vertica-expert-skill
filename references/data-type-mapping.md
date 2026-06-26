@@ -30,6 +30,10 @@ This guide provides comprehensive data type mappings from common databases to Ve
 | SQL Server | INT | INTEGER | 4-byte signed integer |
 | SQL Server | SMALLINT | SMALLINT | 2-byte signed integer |
 | SQL Server | TINYINT | TINYINT | 1-byte unsigned (0-255) |
+| Teradata | BYTEINT | INTEGER | 1-byte integer (-128 to 127) |
+| Teradata | SMALLINT | SMALLINT | 2-byte signed integer |
+| Teradata | INTEGER | INTEGER | 4-byte signed integer |
+| Teradata | BIGINT | BIGINT | 8-byte signed integer |
 
 #### Decimal and Floating Point
 
@@ -55,6 +59,11 @@ This guide provides comprehensive data type mappings from common databases to Ve
 | SQL Server | FLOAT | DOUBLE PRECISION | 8-byte float |
 | SQL Server | NUMERIC(p,s) | NUMERIC(p,s) | Exact numeric |
 | SQL Server | REAL | REAL | 4-byte float |
+| Teradata | DECIMAL(p,s) | NUMERIC(p,s) | Fixed precision decimal |
+| Teradata | NUMERIC(p,s) | NUMERIC(p,s) | Fixed precision decimal |
+| Teradata | FLOAT(n) | DOUBLE PRECISION | Floating point |
+| Teradata | REAL | REAL | 4-byte float |
+| Teradata | DOUBLE PRECISION | DOUBLE PRECISION | 8-byte float |
 
 **Optimization Tips:**
 - Use NUMERIC instead of DOUBLE when precision ≤ 18 digits for better compression
@@ -95,6 +104,9 @@ This guide provides comprehensive data type mappings from common databases to Ve
 | SQL Server | NTEXT | LONG VARCHAR | Deprecated, UTF-8 |
 | SQL Server | TEXT | LONG VARCHAR | Large text |
 | SQL Server | VARCHAR(n) | VARCHAR(n) | Variable length |
+| Teradata | CHAR(n) | CHAR(n) | Fixed length |
+| Teradata | VARCHAR(n) | VARCHAR(n) | Variable length |
+| Teradata | LONG VARCHAR | LONG VARCHAR | Large text |
 
 **Size Limits:**
 - VARCHAR: Up to 65,000 characters
@@ -125,6 +137,9 @@ This guide provides comprehensive data type mappings from common databases to Ve
 | SQL Server | BINARY(n) | BINARY(n) | Fixed binary |
 | SQL Server | IMAGE | LONG VARBINARY | Large binary |
 | SQL Server | VARBINARY(n) | VARBINARY(n) | Variable binary |
+| Teradata | VARBYTE | VARBINARY | Variable-length binary |
+| Teradata | BYTE | VARBINARY | Fixed-length binary |
+| Teradata | BLOB | LONG VARBINARY | Large binary objects |
 
 **Size Limits:**
 - VARBINARY: Up to 65,000 bytes
@@ -156,6 +171,10 @@ This guide provides comprehensive data type mappings from common databases to Ve
 | SQL Server | DATETIME2 | TIMESTAMP | High precision |
 | SQL Server | SMALLDATETIME | TIMESTAMP | Lower precision |
 | SQL Server | TIME | TIME | Time only |
+| Teradata | DATE | TIMESTAMP | Teradata DATE includes time component |
+| Teradata | TIME(p) | TIME(p) | Time with precision |
+| Teradata | TIMESTAMP(p) | TIMESTAMP(p) | Date and time with precision |
+| Teradata | INTERVAL | INTERVAL | Time intervals |
 
 **Interval Types:**
 - INTERVAL DAY TO SECOND: For time intervals
@@ -170,6 +189,7 @@ This guide provides comprehensive data type mappings from common databases to Ve
 | Oracle | NUMBER(1) | BOOLEAN | Convert 0/1 to FALSE/TRUE |
 | PostgreSQL | BOOLEAN | BOOLEAN | TRUE/FALSE/UNKNOWN |
 | SQL Server | BIT | BOOLEAN | Convert 0/1 to FALSE/TRUE |
+| Teradata | BOOLEAN | BOOLEAN | TRUE/FALSE values |
 
 ## Advanced Data Types
 
@@ -229,6 +249,7 @@ See [CREATE FLEX TABLE](sql-syntax-reference.md#create-flex-table) for complete 
 |-----------|------|-------------------|-------|
 | DB2 | ROWID | VARCHAR(64) | Row identifier |
 | DB2 | XML | LONG VARCHAR | Store as text |
+| Teradata | `PERIOD(DATE)` / `PERIOD(TIMESTAMP)` | Two columns: `start_col`, `end_col` | No direct type; store period boundaries as separate columns |
 
 ## Complex Types (Vertica-Specific)
 

@@ -46,6 +46,23 @@ This guide provides comprehensive mapping between common database functions and 
 | SQL Server | ISNUMERIC(str) | REGEXP_LIKE(str, '^[eE0-9.+-]+$') | Matches digits, decimal point, signs, and scientific notation (e/E) |
 | SQL Server | PATINDEX(pattern, str) | REGEXP_INSTR(str, pattern) | Pattern matching with regex |
 | SQL Server | REPLICATE(str, count) | REPEAT(str, count) | String repetition |
+| Teradata | ARRAY_AGG(expr) | LISTAGG(expr USING PARAMETERS separator=', ') | Array aggregation to string |
+| Teradata | CHARACTERS(str) | LENGTH(str) | String length |
+| Teradata | INDEX(str, sub) | INSTR(str, sub) | Substring position |
+| Teradata | STRTOK(str, delim, n) | SPLIT_PART(str, delim, n) | Tokenize string |
+| Teradata | SUBSTR(str, start, length) | SUBSTR(str, start, length) | Same syntax |
+
+### Teradata-Specific Functions
+
+| Source DB | Function | Vertica Equivalent | Notes |
+|-----------|----------|-------------------|-------|
+| Teradata | CAST(x AS DATE FORMAT '...') | TO_DATE(x, '...') | Parse date string |
+| Teradata | CAST(x AS FLOAT FORMAT '...') | TO_CHAR(x, '999...') | Number formatting |
+| Teradata | CSUM(col, order) | SUM(col) OVER (ORDER BY ... ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) | Cumulative sum |
+| Teradata | MSUM(col, n, order) | SUM(col) OVER (ORDER BY ... ROWS BETWEEN n-1 PRECEDING AND CURRENT ROW) | Moving sum |
+| Teradata | MAVG(col, n, order) | AVG(col) OVER (ORDER BY ... ROWS BETWEEN n-1 PRECEDING AND CURRENT ROW) | Moving average |
+| Teradata | MOD(a, b) | a % b or MOD(a, b) | Modulo |
+| Teradata | TOP n | LIMIT n (outer query) | Limit results |
 
 ## Date and Time Functions
 

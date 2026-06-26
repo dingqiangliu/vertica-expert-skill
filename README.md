@@ -1,12 +1,12 @@
 # Vertica Expert Skill
 
-A comprehensive skill for Vertica database migration, including migration from Oracle, DB2, SQL Server, PostgreSQL, and MySQL, SQL syntax reference, PL/vSQL stored procedure development, UDx custom function creation, in-database machine learning.
+A comprehensive skill for Vertica database migration, including migration from Oracle, DB2, SQL Server, PostgreSQL, MySQL, and Teradata, SQL syntax reference, PL/vSQL stored procedure development, UDx custom function creation, in-database machine learning.
 
 ## Overview
 
 This skill is distilled from the Vertica product documentation and my memory to provide detailed guidance on:
 
-- **Migration Guides**: Migrate scripts from Oracle, DB2, SQL Server, PostgreSQL, and MySQL to Vertica, including DDL, DML, stored procedures, and queries
+- **Migration Guides**: Migrate scripts from Oracle, DB2, SQL Server, PostgreSQL, MySQL, and Teradata to Vertica, including DDL, DML, stored procedures, and queries
 - **Stored Procedures  and UDx Development**: Creating custom stored procedures or functions in SQL, C++, and Python
 - **Machine Learning**: In-database predictive analytics with regression, classification, clustering, and time series
 
@@ -37,6 +37,7 @@ vertica-expert-skill/
 │   ├── sqlserver-migration.md              # SQL Server migration guide
 │   ├── postgresql-migration.md             # PostgreSQL migration guide
 │   ├── mysql-migration.md                  # MySQL migration guide
+│   ├── teradata-migration.md               # Teradata migration guide
 │   ├── machine-learning.md                 # In-database ML algorithms
 │   ├── ml-function-mapping.md              # Cross-database ML mapping
 │   ├── multi-agent-migration-guide.md      # 🤖 Multi-agent migration guide (Manager ONLY - other agents use their own config files)
@@ -50,7 +51,8 @@ vertica-expert-skill/
 │       ├── db2-migration-summary.md       # DB2 migration (agent-optimized)
 │       ├── sqlserver-migration-summary.md # SQL Server migration (agent-optimized)
 │       ├── postgresql-migration-summary.md # PostgreSQL migration (agent-optimized)
-│       └── mysql-migration-summary.md     # MySQL migration (agent-optimized)
+│       ├── mysql-migration-summary.md     # MySQL migration (agent-optimized)
+│       └── teradata-migration-summary.md  # Teradata migration (agent-optimized)
 ├── examples/                               # Examples of other databases
 └── slides/                                 # Slides in Python format
 ```
@@ -65,6 +67,7 @@ vertica-expert-skill/
 - **SQL Server to Vertica**: [SQL Server Migration Guide](references/sqlserver-migration.md) - T-SQL to Vertica SQL with stored procedure migration following generic requirements ([Agent-Optimized Summary](references/reference-summaries/sqlserver-migration-summary.md))
 - **PostgreSQL to Vertica**: [PostgreSQL Migration Guide](references/postgresql-migration.md) - PL/pgSQL to PL/vSQL with function mapping following generic requirements ([Agent-Optimized Summary](references/reference-summaries/postgresql-migration-summary.md))
 - **MySQL to Vertica**: [MySQL Migration Guide](references/mysql-migration.md) - Schema and query conversion with performance optimization following generic requirements ([Agent-Optimized Summary](references/reference-summaries/mysql-migration-summary.md))
+- **Teradata to Vertica**: [Teradata Migration Guide](references/teradata-migration.md) - SPL to PL/vSQL conversion with Teradata-specific features (QUALIFY, PRIMARY INDEX, BTEQ, volatile tables) following generic requirements ([Agent-Optimized Summary](references/reference-summaries/teradata-migration-summary.md))
 
 ### 2. Vertica SQL Development
 - **Complete SQL Syntax**: DDL, DML, queries, CTEs, window functions
@@ -111,7 +114,7 @@ vertica-expert-skill/
 
 This skill provides comprehensive coverage of:
 
-1. **Database Migration** - Converting Oracle, DB2, SQL Server, PostgreSQL, and MySQL procedures
+1. **Database Migration** - Converting Oracle, DB2, SQL Server, PostgreSQL, MySQL, and Teradata procedures
 2. **OLTP to OLAP Rewrite** - Rewriting row-by-row procedural code to set-based SQL for Vertica's columnar architecture
 3. **Vertica SQL Development** - Creating complex analytical queries from requirements
 4. **PL/vSQL Development** - Building stored procedures with error handling
@@ -149,7 +152,7 @@ This skill provides comprehensive coverage of:
    - 💡 **For Multi-Agent Workflow**: Use [Summary version](references/reference-summaries/generic-migration-summary.md) to reduce context usage
 3. **Read [OLTP to OLAP Rewrite Guide](references/oltp-to-olap-rewrite-guide.md)** (from vertica-expert skill) 🔄 **ESSENTIAL** - Learn rewrite patterns for procedural/OLTP code
    - 💡 **For Multi-Agent Workflow**: Use [Summary version](references/reference-summaries/oltp-to-olap-summary.md) to reduce context usage
-4. **Identify your source database** (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
+4. **Identify your source database** (Oracle, DB2, SQL Server, PostgreSQL, MySQL, Teradata)
 5. **Process source files sequentially** - never skip or reorder objects
 6. **Migrate ALL objects** - tables, views, procedures, functions, DML, sequences
 7. **Rewrite procedural code** using OLTP-to-OLAP patterns (cursors→window functions, loops→set-based SQL)
@@ -354,7 +357,7 @@ The Manager agent saves its state to `manager_state.md` (in current working dire
 - **Migrator reads:**
   - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md)
   - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md)
-  - Database-specific migration guide summaries (Oracle, DB2, SQL Server, PostgreSQL, MySQL)
+  - Database-specific migration guide summaries (Oracle, DB2, SQL Server, PostgreSQL, MySQL, Teradata)
   - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
   - [Function Mapping Guide](references/function-mapping.md)
   - [Data Type Mapping Guide](references/data-type-mapping.md)

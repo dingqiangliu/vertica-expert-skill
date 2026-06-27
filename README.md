@@ -210,6 +210,12 @@ For common database script migrations , follow this simple approach:
    
    Before actually starting the task, pause and wait for my confirmation.
    ```
+   Or:
+   ```prompt
+   Task: Using Embedded SQL Script Migration Workflow to migrate Teradata database script from "examples/teradata/app2.pl" to Vertica, saving results to "examples/vertica/" with identical file name.
+   
+   Before actually starting the task, pause and wait for my confirmation.
+   ```
 - Then：
   
    ```prompt
@@ -261,7 +267,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 **When to Use:** Multiple source files, or single file >200 lines, or multiple stored procedures/functions, or large-scale migrations requiring strict context management
 
-**When NOT to Use:** Single small file, simple table structure migration
+**When NOT to Use:** Single small file, simple table structure migration, embedded SQL scripts (Shell/Perl/Python with Here doc SQL), files where temporary tables create inter-statement dependencies
 
 **4-Agent Architecture:**
 

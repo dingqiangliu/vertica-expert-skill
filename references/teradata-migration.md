@@ -334,21 +334,7 @@ Currency_Cd CHAR(3) DEFAULT '   ' NOT NULL
 
 **Rule**: Teradata BTEQ scripts are typically invoked from Perl scripts via `open(BTEQ, "| bteq")`. Change the command to `/opt/vertica/bin/vsql` and replace BTEQ-specific control statements with VSQL equivalents. Add `\set ON_ERROR_STOP ON` at the top of the VSQL script to handle errors (replacing `.IF ERRORCODE` logic).
 
-```perl
-# Teradata BTEQ
-open(BTEQ, "| bteq");
-print BTEQ <<ENDOFINPUT;
-.LOGON user/password
-...
-ENDOFINPUT;
-
-# Vertica VSQL
-open(BTEQ, "| /opt/vertica/bin/vsql");
-print BTEQ <<ENDOFINPUT;
-\\set ON_ERROR_STOP ON
-...
-ENDOFINPUT;
-```
+> **Note**: For Perl/Shell scripts with Here doc embedded BTEQ/SQL, use the **Embedded SQL Script Migration Workflow** (defined in SKILL.md). That workflow handles the preservation of script structure (variables, functions, control flow) while converting the embedded SQL inside the Here doc block.
 
 ### BTEQ Special Statements
 

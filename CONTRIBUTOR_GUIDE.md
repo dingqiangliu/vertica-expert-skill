@@ -31,6 +31,7 @@
 □ Update corresponding Level 5 summary
 □ Update agent configurations if workflow changed
 □ Test both General and Multi-Agent workflows
+□ Test Embedded SQL Script Migration Workflow (if applicable)
 □ Verify all cross-references are valid
 □ Update statistics in this CLAUDE.md
 ```
@@ -409,6 +410,7 @@ If Claude Code isn't behaving as expected:
 | **Summary Document** | Agent-optimized documentation containing only decision-making information |
 | **General Migration Workflow** | Single-agent workflow for small-medium migrations |
 | **Multi-Agent Migration Workflow** | Multi-agent workflow for large-scale migrations |
+| **Embedded SQL Script Migration Workflow** | Workflow for Shell/Perl/Python scripts with Here doc embedded SQL. References General Migration Workflow with overrides. |
 | **VSQL** | Vertica SQL command-line tool |
 | **PL/vSQL** | Vertica's stored procedure language |
 | **UDx** | User-Defined Extension (custom functions in C++, Python, Java, R) |

@@ -100,13 +100,14 @@ See [Migration Guides Overview](references/migration-guides-overview.md) for com
 
 ## Part 4: Workflow Architecture
 
-### 4.1 Two Workflows
+### 4.1 Three Workflows
 
-| Aspect | General Workflow | Multi-Agent Workflow |
-|--------|------------------|---------------------|
-| **Best For** | Small-medium migrations (<200 lines) | Large-scale migrations (>200 lines) |
-| **Agent Count** | 1 (Main Agent) | 4 (Manager + 3 sub-agents) |
-| **Context Usage** | Single context | Distributed contexts |
+| Aspect | General Workflow | Multi-Agent Workflow | Embedded SQL Script Workflow |
+|--------|------------------|---------------------|-----------------------------|
+| **Best For** | Small-medium migrations (<200 lines) | Large-scale migrations (>200 lines) | Shell/Perl/Python scripts with Here doc embedded SQL |
+| **Agent Count** | 1 (Main Agent) | 4 (Manager + 3 sub-agents) | 1 (Main Agent) |
+| **Context Usage** | Single context | Distributed contexts | Single context |
+| **References** | General Migration rules | General Migration rules + Multi-Agent guide | General Migration rules with 5 overrides |
 
 See SKILL.md for detailed workflow selection and execution rules.
 

@@ -127,18 +127,21 @@ For optimizing existing queries:
 > # Step 0a: Get file size (acceptable - metadata only)
 > wc -l source_file.sql  # Count lines to determine workflow
 >
-> # Step 0b: Identify object types (DO NOT READ CONTENT)
+> # Step 0b: Identify object types and file types (DO NOT READ CONTENT)
 > grep -n "CREATE" source_file.sql  # Find CREATE statements
 > grep -n "CURSOR\|LOOP\|FETCH" source_file.sql  # Find OLTP patterns
 > grep -n "INSERT\|UPDATE\|DELETE\|MERGE" source_file.sql  # Find DML types
+> grep -n "<<<<\|<<~\|<<<" source_file.*  # Here doc start markers
+> grep -n "print.*BTEQ\|print.*VSQL\|open.*bteq\|open.*vsql\|open.*sqlplus\|open.*mysql" source_file.*  # DB client pipe
+> grep -n "#!/bin/bash\|#!/bin/sh\|#!/usr/bin/perl\|#!/usr/bin/env perl\|#!/usr/bin/python" source_file.*  # Shebang
 > ```
 >
-> **PURPOSE**: Determine WHICH WORKFLOW to use (General or Multi-Agent).
+> **PURPOSE**: Determine WHICH WORKFLOW to use (General, Multi-Agent, or Embedded SQL Script).
 >
 > **IMPORTANT**: Step 0 determines the WORKFLOW ONLY, NOT which documents to load.
 > - Document loading depends on your ROLE, not file content
 > - If you are Manager in Multi-Agent Workflow: Load ONLY multi-agent-migration-guide.md
-> - If you are in General Workflow: Load documents as specified in that section
+> - If you are in General/Embedded Workflow: Load documents as specified in that section
 >
 > **ACCEPTABLE OUTPUT**:
 > - "File has 1000 lines → Use Multi-Agent Workflow (>200 lines)"
@@ -146,6 +149,7 @@ For optimizing existing queries:
 > - "File contains tables, views, and stored procedures"
 > - "File has cursor loops and row-by-row DML"
 > - "File contains INSERT, UPDATE, DELETE statements"
+> - "File has Here doc markers + shebang → Use Embedded SQL Script Migration Workflow"
 >
 > **UNACCEPTABLE ACTIONS**:
 > - ❌ Reading the file with Read tool
@@ -159,6 +163,12 @@ For optimizing existing queries:
 > **Use Multi-Agent Workflow when**:
 > - Explicitly requested
 > - Files > 1 file OR single file > 200 lines
+>
+> **Use Embedded SQL Script Migration Workflow when**:
+> - Source file contains Here doc markers (`<<<<`, `<<~`, `<<<`)
+> - AND source file has shebang or database client pipe
+> - This workflow references General Migration Workflow with 5 overrides
+> - **Note**: Multi-Agent is NOT suitable for embedded SQL scripts (temporary table dependencies prevent isolated per-object testing)
 >
 
 #### General Migration Workflow (Single-Agent)
@@ -204,6 +214,7 @@ For optimizing existing queries:
    - Rewrite OLTP→OLAP patterns (cursors, row-by-row DML)
    - Preserve ALL logic — never simplify or remove code
 7. **Test** each object immediately using single VSQL call with `SET SESSION AUTOCOMMIT TO ON;`
+   > ⚠️ **SCOPE**: This step (VSQL testing, `$VSQL` environment variable, `SET SESSION AUTOCOMMIT`) applies **ONLY** to General Migration Workflow. Embedded SQL Script Migration Workflow uses a completely different test strategy (see its Step 9).
 8. **Append** migrated code to target file after test passes
 9. **Repeat** for each object: READ → IDENTIFY → MIGRATE → TEST → PASS → APPEND
 10. **Clean up** test environment **ONLY AFTER** all source files have been processed
@@ -325,6 +336,141 @@ If you are the Manager, answer these questions BEFORE proceeding. This is a hard
   > "I should ONLY read: multi-agent-migration-guide.md"
 
 **If you cannot answer all 4 questions correctly, STOP and re-read the Multi-Agent Migration Workflow section.**
+
+#### Embedded SQL Script Migration Workflow
+
+**When to Use:**
+- Source file is a Shell/Perl/Python script with Here doc embedded SQL
+- Detected by: Here doc markers (`<<<<`, `<<~`, `<<<`) + shebang/pipe
+- **Forces General Workflow for SQL inside Here doc** (Multi-Agent is NOT suitable)
+
+**Relationship to General Migration Workflow:**
+- This workflow **REFERENCES** General Migration Workflow for all SQL migration rules
+- All General Workflow rules apply to Here doc SQL unless explicitly overridden below
+- All reference documents (generic, source-specific, function mapping, data types) are identical
+- The only differences are the 5 overrides listed below
+
+**Overrides (5 differences from General Workflow):**
+
+| # | Aspect | General Workflow | Embedded SQL Workflow |
+|---|--------|-----------------|----------------------|
+| 1 | Read range | Entire source file | Only the Here doc block (between start/end markers) |
+| 2 | Variable preservation | N/A (no script variables) | Preserve script variables (`${TXNDATE}`, `$1`, etc.) |
+| 3 | Append target | End of target file | End of target Here doc block (before end marker) |
+| 4 | Test method | Execute single SQL in VSQL | Execute entire Shell/Perl script |
+| 5 | Fix method | Edit SQL in target file | Edit SQL in target Here doc block |
+
+**Process:**
+1. **Complete Step 0**: ANALYZE SOURCE FILES (MANDATORY - ALL WORKFLOWS) - detect embedded SQL script
+2. **Load** basic reference documents at startup (from the vertica-expert skill):
+   - [Generic Migration Guide](references/reference-summaries/generic-migration-summary.md) - **MANDATORY**
+   - [SQL Syntax Reference](references/reference-summaries/sql-syntax-summary.md)
+   - [Function Mapping Guide](references/function-mapping.md)
+   - [Data Type Mapping Guide](references/data-type-mapping.md)
+   - Source-specific Migration Guide (based on source database type, from the vertica-expert skill):
+     - [Oracle Migration Guide](references/reference-summaries/oracle-migration-summary.md)
+     - [DB2 Migration Guide](references/reference-summaries/db2-migration-summary.md)
+     - [SQL Server Migration Guide](references/reference-summaries/sqlserver-migration-summary.md)
+     - [PostgreSQL Migration Guide](references/reference-summaries/postgresql-migration-summary.md)
+     - [MySQL Migration Guide](references/reference-summaries/mysql-migration-summary.md)
+     - [Teradata Migration Guide](references/reference-summaries/teradata-migration-summary.md)
+3. **Load additional documents on-demand** (only when needed, from the vertica-expert skill):
+   - [OLTP to OLAP Rewrite Guide](references/reference-summaries/oltp-to-olap-summary.md) — ONLY for stored procedures or adjacent single-row DML
+   - [Stored Procedures Guide](references/reference-summaries/stored-procedures-summary.md) — ONLY for stored procedures
+   - [User-Defined SQL Functions Guide](references/user-defined-sql-functions-guide.md) — ONLY for user-defined SQL functions
+4. **When stuck on a migration problem** (per HIGHEST PRIORITY REMINDER):
+   a. **Search all references**: `grep -rn "keyword" references/ --include="*.md"` — finds answers with zero context cost
+   b. **If found in a summary**: read that section of the summary
+   c. **If found in a full doc**: locate section via `grep -n "^## \|^### " references/<doc>.md`, then load ONLY that section with `Read offset=N limit=M`
+   d. **If NOT found anywhere**: test in VSQL to verify whether the feature is truly unsupported
+   e. **NEVER give up after checking only one document** — the HIGHEST PRIORITY REMINDER says dig deeper
+5. **Locate Here Doc Boundaries** (Phase 1):
+   - Use `grep -n` to locate Here doc start/end markers
+   - Record boundary line numbers: `here_doc_start=N`, `here_doc_end=M`
+   - Locate database client pipe command (Perl: `open(CLIENT, "| ...")`, Bash: `<<<"..." vsql`)
+   - Read source script sections outside Here doc to preserve framework
+   - Convert pipe command: source client → `/opt/vertica/bin/vsql`
+   - **⚠️ CRITICAL — WRITE TARGET FILE WITH EMPTY HERE DOC ONLY**: Write the target file containing ONLY the script framework (everything outside the Here doc) + the Here doc start marker + the Here doc end marker. Do NOT copy source file content into the target. Do NOT include any un-migrated SQL from the source. The target Here doc starts EMPTY — migrated SQL will be appended one object at a time in Step 9.
+   - ❌ NEVER: `cp source.* target.*` — this copies ALL un-migrated code into the target
+   - ✅ ALWAYS: Write target with framework + empty Here doc block (only start/end markers between the framework)
+6. **Map SQL Objects in Here Doc** (BEFORE reading content):
+   - Use grep to create a complete inventory of SQL objects within the Here doc boundaries
+   - Pattern: `sed -n '${START},${END}p' source_file | grep -ni "CREATE\|INSERT\|UPDATE\|DELETE\|MERGE\|DROP" | grep -v "^[0-9]*:.*--.*"`
+   - Output: numbered list of SQL objects with line numbers and types (e.g., "Line 64: CREATE TABLE", "Line 74: INSERT", "Line 1025: DELETE")
+   - This satisfies the need for a "complete picture" WITHOUT reading full SQL content
+   - **⚠️ CRITICAL: This grep output is the ONLY planning allowed before migration. Do NOT
+     read full SQL content at this stage.**
+7. **Read** SQL from Here doc block only, section by section (ONLY after steps 1-6 are complete):
+   - Read ONE object at a time, in the order listed in your grep inventory
+   - **⚠️ CRITICAL: After reading one object, you MUST migrate and append that object
+     BEFORE reading the next object.** Reading multiple objects before migrating any
+     is a workflow violation.
+   - Each read = one complete SQL object (CREATE TABLE, INSERT, DELETE, etc.)
+   - **Read SQL content only** — the grep inventory from Step 6 gives you line numbers
+     and types, but NOT the actual SQL. This step loads the full SQL for ONE object.
+   - Do NOT read content from multiple objects before migrating any of them
+8. **Convert** each SQL object following generic migration requirements:
+   - Apply source-database→Vertica rules (same rules as General Workflow)
+   - One-to-one mapping: tables→tables, views→views
+   - Rewrite OLTP→OLAP patterns (cursors, row-by-row DML)
+   - Preserve ALL logic — never simplify or remove code
+   - **Preserve script variables** — Shell `$VAR`, Perl `${VAR}` are NOT SQL, do NOT convert
+   - **Preserve ALL script structure** — variables, functions, control flow remain intact
+9. **Append** migrated SQL to target Here doc block (BEFORE end marker):
+   - Append inside the Here doc, not at end of file
+   - Target: end of target Here doc block (before `ENDOFINPUT` / `EOF` marker)
+10. **Test** by executing the ENTIRE target script (NOT individual SQL statements):
+   - **⚠️ CRITICAL: Test = execute the script, NOT VSQL**
+   - **⚠️ MANDATORY: You MUST execute the test after EVERY single object migration.** Skipping the test is a workflow violation. No exceptions.
+   - Execute the entire Shell/Perl/Python target script as-is with appropriate test parameters
+   - Example: `perl target.pl <test_param>` or `bash target.sh <test_param>`
+   - Do NOT extract SQL into VSQL for isolated testing
+   - ❌ NEVER: `$VSQL <<-'EOF' ... extracted SQL ... EOF`
+   - ❌ NEVER: `SET SESSION AUTOCOMMIT TO ON;` — this is for General Workflow's VSQL-based testing, NOT for script execution
+   - ❌ NEVER: Use `$VSQL` environment variable for connection — the script manages its own connection via its pipe command (`open(BTEQ, "| /opt/vertica/bin/vsql ...")`)
+   - ✅ ALWAYS: Execute the entire target script as-is
+   - **⚠️ CRITICAL — DO NOT PRE-CHECK THE ENVIRONMENT**: Do NOT check database connectivity, do NOT check if source tables exist, do NOT verify users/permissions, do NOT run any diagnostic queries before executing the script. Just run the script directly. If the script fails due to missing tables or connection issues, that's a test failure — fix the script and re-run.
+   - **⚠️ CRITICAL — ANALYZE COMPLETE OUTPUT**: After executing the script, you MUST analyze the ENTIRE output for:
+     - **ERROR** messages: any line containing "ERROR" is a failure that must be fixed
+     - **WARNING** messages: any line containing "WARNING" must be investigated
+     - **NOTICE** messages: informational but may reveal issues
+     - **Row counts**: verify INSERT/UPDATE/DELETE produced expected results (0 rows in test environment is normal if source tables are empty)
+     - **Exit code**: non-zero exit code indicates failure
+     - If ANY ERROR is found, go to Fix step (Step 11). Do NOT proceed to next object.
+   - **Note**: Temporary tables are session-scoped — testing the full script ensures all
+     dependent objects exist in the same session, just like production
+   - ⚠️ **EXCLUDED FROM THIS WORKFLOW**: The `$VSQL` environment variable, `SET SESSION AUTOCOMMIT`, and single-SQL VSQL testing described in General Migration Workflow Step 7 **DO NOT APPLY** here.
+11. **Fix** if test fails:
+    - Use Edit tool to fix SQL in target Here doc block (before end marker)
+    - Re-test the entire target script after each fix
+    - Repeat until test passes
+12. **Repeat** steps 7-11 for each SQL object in source order (never reorder)
+    - Read → Convert → Append → Test → Fix (if needed) → PASS → next object
+    - **NO LOOK-AHEAD**: You MUST complete current object (migrate + append + test + fix)
+      before reading the next section
+
+**Key Rules:**
+- Keep code intact — NEVER split procedures, functions, or statements
+- **DO NOT DROP** migrated objects or data after individual testing
+- Check COMPLETE logs (NOTICE, WARNING, ERROR, row counts, return values)
+- Process objects in source order (never reorder)
+- **NEVER read the entire source file at once** — Phase 1 uses grep to locate boundaries, Phase 2 reads Here doc content section-by-section
+- **Preserve ALL script structure** — variables, functions, control flow remain intact
+- **Preserve parameter variables** — Shell `$VAR`, Perl `${VAR}`, Python f-strings are not SQL, do not convert
+- **Temporary tables prevent isolated testing** — must test the entire script after each append
+
+**Mandatory Rules (violation = workflow breach):**
+
+1. **NO LOOK-AHEAD**: After reading a section of the Here doc, you MUST migrate and
+   append the current object BEFORE reading the next section. Reading N sections
+   before migrating any is a violation.
+
+2. **TEST = EXECUTE THE SCRIPT, NOT VSQL — MANDATORY AFTER EVERY OBJECT**: After each append, test by executing the ENTIRE target script with appropriate test parameters. Do NOT use VSQL to execute individual SQL statements. Skipping the test after any object is a workflow violation.
+
+   ❌ NEVER: `$VSQL <<-'EOF' ... extracted SQL ... EOF`
+   ✅ ALWAYS: Execute the entire target script as-is, then ANALYZE COMPLETE OUTPUT (ERROR, WARNING, NOTICE, row counts, exit code) before proceeding to next object
+
+3. **TARGET FILE STARTS EMPTY**: The target file MUST start with only the script framework + empty Here doc block. Do NOT copy the entire source file into the target. Append migrated objects one at a time.
 
 #### Quick Start
 Provide: (1) Source database type, (2) Source files list, (3) Target file path
